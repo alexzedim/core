@@ -40,7 +40,7 @@
 
 ### 🖥️ Hardware Specifications
 
-- **CPU:** Intel Xeon E5-2680
+- **CPU:** [Intel Xeon E5-2680v4](https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+E5-2680+v4+%40+2.40GHz&id=2779)
 - **RAM:** 32GB DDR4
 - **Storage:** RAID 10 SSD NVMe array
 - **Network:** 1 Gbps SFP Ethernet
