@@ -43,7 +43,7 @@
 - **CPU:** Intel Xeon E5-2680
 - **RAM:** 32GB DDR4
 - **Storage:** RAID 10 SSD NVMe array
-- **Network:** 1 Gbps SFTP Ethernet
+- **Network:** 1 Gbps SFP Ethernet
 - **OS:** Linux (Docker-based containerization)
 
 <div align="center">
