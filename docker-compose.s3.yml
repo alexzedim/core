@@ -1,0 +1,19 @@
+name: 's3'
+version: '3.8'
+services:
+    minio:
+        image: bitnami/minio:latest
+        container_name: minio
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+        command: server /bitnami/minio/data --console-address ":9001"
+        volumes:
+            - minio-s3:/bitnami/minio/data
+
+volumes:
+    minio-s3:
+        driver: local

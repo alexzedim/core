@@ -1,0 +1,109 @@
+name: 'analytics'
+version: '3.8'
+services:
+  loki:
+    container_name: loki
+    image: grafana/loki:latest
+    restart: always
+    ports:
+      - '3100:3100'
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - loki
+
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:latest
+    restart: always
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - loki
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    restart: always
+    ports:
+      - '9090:9090'
+    volumes:
+      - prometheus_data:/prometheus
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - loki
+
+  postgres_exporter:
+    container_name: postgres_exporter
+    image: prometheuscommunity/postgres-exporter:latest
+    restart: always
+    ports:
+      - '9187:9187'
+    environment:
+      DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
+      PG_EXPORTER_WEB_LISTEN_ADDRESS: ":9187"
+      PG_EXPORTER_WEB_TELEMETRY_PATH: "/metrics"
+      PG_EXPORTER_DISABLE_SETTINGS_METRICS: false
+    networks:
+      - loki
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: always
+    environment:
+      GF_PATHS_PROVISIONING: ${GF_PATHS_PROVISIONING}
+      GF_AUTH_ANONYMOUS_ENABLED: ${GF_AUTH_ANONYMOUS_ENABLED}
+      GF_AUTH_ANONYMOUS_ORG_ROLE: ${GF_AUTH_ANONYMOUS_ORG_ROLE}
+      GF_FEATURE_TOGGLES_ENABLE: ${GF_FEATURE_TOGGLES_ENABLE}
+      GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS: true
+      GF_PLUGIN_PUBLIC_KEY_RETRIEVAL_DISABLED: true
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
+      GF_INSTALL_IMAGE_RENDERER_PLUGIN: false
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana:/var/lib/grafana
+    networks:
+      - loki
+
+networks:
+  loki:
+    driver: bridge
+
+volumes:
+  grafana:
+  prometheus_data:
+
+
+configs:
+  prometheus_config:
+    content: |
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+
+      rule_files:
+        # - "first_rules.yml"
+        # - "second_rules.yml"
+
+      scrape_configs:
+        - job_name: 'prometheus'
+          static_configs:
+            - targets: ['127.0.0.1:9090']
+
+        - job_name: 'postgres'
+          static_configs:
+            - targets: ['127.0.0.1:9187']
+          scrape_interval: 30s
+          metrics_path: /metrics
