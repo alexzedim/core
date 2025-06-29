@@ -1,0 +1,16 @@
+name: "maria"
+version: '3.8'
+services:
+    mariadb:
+        image: mariadb:latest
+        container_name: mariadb
+        env_file:
+            - stack.env
+        ports:
+            - "3306:3306"
+        networks:
+            - mariadb_network
+
+networks:
+    mariadb_network:
+        driver: bridge

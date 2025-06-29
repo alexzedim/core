@@ -1,0 +1,30 @@
+name: "routing"
+version: '3.8'
+services:
+    traefik:
+        image: traefik:v3.4
+        container_name: traefik
+        environment:
+            - TZ=${TZ}
+        command:
+            # Main configuration file
+            - "--configfile=/etc/traefik/traefik.yml"
+            # Enable file provider for dynamic configuration
+            - "--providers.file.directory=/etc/traefik/"
+            - "--providers.file.watch=true"
+            # Enable Docker provider
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            # Enable API and dashboard
+            - "--api.dashboard=true"
+            - "--api.insecure=false"
+        ports:
+            - '80:80'
+            - '443:443'
+            - '9000:8080'
+        volumes:
+            # Mount entire traefik config directory
+            - /opt/appdata/traefik:/etc/traefik/traefik:ro
+        labels:
+            # Enable Traefik for this service
+            - "traefik.enable=true"

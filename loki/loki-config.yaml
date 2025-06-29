@@ -1,0 +1,10 @@
+compactor:
+    working_directory: /data/loki/compactor # A path for the compactor to store temporary files
+    retention_enabled: true
+
+limits_config:
+    retention_period: 30d # 30 days (e.g., 30d, 4w, 720h)
+    retention_stream:
+        -   selector: '{namespace="dev"}'
+            priority: 1
+            period: 24h

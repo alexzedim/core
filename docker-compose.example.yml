@@ -1,0 +1,365 @@
+# Optional: Name for the project (default is directory name)
+name: "example"
+# Docker Compose file format version
+version: '3.8'
+# Define services (containers)
+services:
+    # Web application service
+    web:
+        # Build configuration
+        build:
+            context: .                    # Build context (current directory)
+            dockerfile: Dockerfile        # Custom Dockerfile name
+            args:                        # Build arguments
+                - NODE_ENV=production
+                - APP_VERSION=1.0.0
+            target: production           # Multi-stage build target
+            cache_from:                  # Images to use as cache source
+                - node:18-alpine
+
+        # Alternative: use pre-built image instead of build
+        # image: nginx:alpine
+
+        # Container name (optional, auto-generated if not specified)
+        container_name: my-web-app
+
+        # Hostname inside the container
+        hostname: web-server
+
+        # Restart policy
+        restart: unless-stopped        # Options: no, always, on-failure, unless-stopped
+
+        # Environment variables
+        environment:
+            - NODE_ENV=production
+            - DATABASE_URL=postgresql://user:pass@db:5432/myapp
+            - REDIS_URL=redis://redis:6379
+            # Alternative object syntax:
+            # DATABASE_HOST: db
+            # DATABASE_PORT: 5432
+
+        # Load environment from file
+        env_file:
+            - .env
+            - .env.production
+
+        # Port mapping (host:container)
+        ports:
+            - "3000:3000"               # HTTP
+            - "3001:3001"               # Alternative port
+            - "127.0.0.1:8080:8080"     # Bind to specific host interface
+
+        # Expose ports to other containers (not to host)
+        expose:
+            - "9000"
+
+        # Volume mounts
+        volumes:
+            - ./app:/usr/src/app:ro     # Read-only bind mount
+            - ./logs:/var/log/app       # Read-write bind mount
+            - uploads:/app/uploads      # Named volume
+            - type: bind                # Long syntax
+              source: ./config
+              target: /etc/myapp
+              read_only: true
+            - type: volume              # Named volume with options
+              source: app-cache
+              target: /var/cache/app
+              volume:
+                  nocopy: true
+
+        # Working directory inside container
+        working_dir: /usr/src/app
+
+        # User to run the container as
+        user: "1000:1000"             # UID:GID or username:groupname
+
+        # Command to run (overrides Dockerfile CMD)
+        command: ["npm", "start"]
+        # Alternative string syntax:
+        # command: npm start
+
+        # Entrypoint (overrides Dockerfile ENTRYPOINT)
+        entrypoint: ["docker-entrypoint.sh"]
+
+        # Service dependencies
+        depends_on:
+            db:
+                condition: service_healthy  # Wait for health check
+            redis:
+                condition: service_started  # Just wait for start
+
+        # Health check
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+            interval: 30s               # How often to check
+            timeout: 10s                # How long to wait for response
+            retries: 3                  # How many failures before unhealthy
+            start_period: 40s           # Grace period during startup
+
+        # Network configuration
+        networks:
+            - frontend
+            - backend
+
+        # DNS configuration
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
+
+        # Extra hosts (/etc/hosts entries)
+        extra_hosts:
+            - "api.example.com:192.168.1.100"
+            - "cache.local:127.0.0.1"
+
+        # Labels for metadata
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.web.rule=Host(`example.com`)"
+            - "com.example.description=Web application"
+
+        # Logging configuration
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+        # Resource limits
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.5'             # CPU limit
+                    memory: 512M            # Memory limit
+                reservations:
+                    cpus: '0.25'            # CPU reservation
+                    memory: 256M            # Memory reservation
+
+        # Security options
+        security_opt:
+            - no-new-privileges:true
+
+        # Capabilities
+        cap_add:
+            - SYS_TIME
+        cap_drop:
+            - ALL
+
+        # Privileged mode (avoid if possible)
+        # privileged: true
+
+        # Process namespace mode
+        pid: host                     # Share host PID namespace
+
+        # IPC namespace mode
+        ipc: host                     # Share host IPC namespace
+
+        # Devices
+        devices:
+            - "/dev/sda:/dev/xvda:rwm"
+
+        # Sysctls
+        sysctls:
+            - net.core.somaxconn=1024
+
+        # Ulimits
+        ulimits:
+            nproc: 65535
+            nofile:
+                soft: 20000
+                hard: 40000
+
+    # Database service
+    db:
+        image: postgres:15-alpine
+        container_name: postgres-db
+        restart: unless-stopped
+
+        environment:
+            POSTGRES_DB: myapp
+            POSTGRES_USER: dbuser
+            POSTGRES_PASSWORD: secretpassword
+            POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./init-scripts:/docker-entrypoint-initdb.d:ro
+
+        ports:
+            - "5432:5432"
+
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U dbuser -d myapp"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+        networks:
+            - backend
+
+        # Shared memory size for PostgreSQL
+        shm_size: 256m
+
+        # tmpfs mounts
+        tmpfs:
+            - /tmp
+            - /var/tmp
+
+    # Redis cache service
+    redis:
+        image: redis:7-alpine
+        container_name: redis-cache
+        restart: unless-stopped
+
+        command: redis-server --appendonly yes --requirepass myredispassword
+
+        volumes:
+            - redis_data:/data
+            - ./redis.conf:/etc/redis/redis.conf:ro
+
+        ports:
+            - "6379:6379"
+
+        networks:
+            - backend
+
+        healthcheck:
+            test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 5
+
+    # Nginx reverse proxy
+    nginx:
+        image: nginx:alpine
+        container_name: nginx-proxy
+        restart: unless-stopped
+
+        ports:
+            - "80:80"
+            - "443:443"
+
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./ssl:/etc/nginx/ssl:ro
+            - static_files:/var/www/static
+
+        depends_on:
+            - web
+
+        networks:
+            - frontend
+
+        labels:
+            - "com.example.service=reverse-proxy"
+
+    # Worker service (background jobs)
+    worker:
+        build:
+            context: .
+            dockerfile: Dockerfile.worker
+
+        restart: unless-stopped
+
+        environment:
+            - WORKER_PROCESSES=4
+            - QUEUE_NAME=default
+
+        env_file:
+            - .env
+
+        volumes:
+            - ./app:/usr/src/app:ro
+            - worker_logs:/var/log/worker
+
+        depends_on:
+            - db
+            - redis
+
+        networks:
+            - backend
+
+        # Scale this service
+        deploy:
+            replicas: 2
+
+# Named volumes
+volumes:
+    postgres_data:
+        driver: local                 # Volume driver
+        driver_opts:                  # Driver options
+            type: none
+            o: bind
+            device: /opt/postgres-data
+
+    redis_data:
+        driver: local
+
+    uploads:
+        driver: local
+        driver_opts:
+            type: tmpfs
+            device: tmpfs
+            o: size=100m,uid=1000
+
+    app-cache:
+        external: true                # Use existing external volume
+        name: my-app-cache-volume
+
+    static_files: {}                # Simple named volume
+
+    worker_logs:
+        driver: local
+
+# Network configuration
+networks:
+    frontend:
+        driver: bridge                # Network driver
+        driver_opts:
+            com.docker.network.driver.mtu: 1450
+        ipam:                        # IP Address Management
+            config:
+                - subnet: 172.20.0.0/16
+                  gateway: 172.20.0.1
+        labels:
+            - "com.example.network.description=Frontend network"
+
+    backend:
+        driver: bridge
+        internal: true                # Internal network (no external access)
+        attachable: true              # Allow manual container attachment
+
+    external-network:
+        external: true                # Use existing external network
+        name: shared-network
+
+# Secrets (Docker Swarm only, but shown for completeness)
+secrets:
+    db_password:
+        file: ./secrets/db_password.txt
+    api_key:
+        external: true
+        name: production_api_key
+
+# Configs (Docker Swarm only)
+configs:
+    nginx_config:
+        file: ./nginx.conf
+    app_config:
+        external: true
+        name: production_app_config
+
+# Extensions (custom fields)
+x-logging: &default-logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+
+x-deploy: &default-deploy
+    resources:
+        limits:
+            memory: 512M
+        reservations:
+            memory: 256M

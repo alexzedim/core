@@ -1,0 +1,96 @@
+name: 'github'
+version: '3.8'
+services:
+    cmnw-github-runner:
+        image: myoung34/github-runner:latest
+        container_name: cmnw-github-runner
+        environment:
+            # Required: Your GitHub repository or organization
+            REPO_URL: https://github.com/alexzedim/cmnw
+
+            # Required: GitHub Personal Access Token or Registration Token
+            # For repo: needs 'repo' scope
+            # For org: needs 'admin:org' scope
+            ACCESS_TOKEN: ${GITHUB_TOKEN}
+
+            # Optional: Runner name (defaults to hostname)
+            RUNNER_NAME: cmnw-runner
+
+            # Optional: Runner labels (comma separated)
+            RUNNER_LABELS: docker,linux,self-hosted,cmnw
+
+            # Optional: Runner group (for organizations)
+            # RUNNER_GROUP: default
+
+            # Optional: Working directory
+            # RUNNER_WORKDIR: /tmp/runner/work
+
+            # Optional: Replace existing runner with same name
+            RUNNER_REPLACE_EXISTING: true
+
+            # Optional: Enable Docker-in-Docker
+            DOCKER_ENABLED: true
+
+        volumes:
+            # Mount Docker socket for Docker-in-Docker
+            - /var/run/docker.sock:/var/run/docker.sock
+
+            # Persistent runner work directory
+            - cmnw-runner-work:/tmp/runner/work
+
+            # Optional: Mount host directories for builds
+            - ./builds:/builds
+
+            # Optional: Cache directories for faster builds
+            - github-runner-cache:/home/runner/.cache
+
+        restart: always
+
+        # Optional: Resource limits
+        deploy:
+            resources:
+                limits:
+                    cpus: '4.0'
+                    memory: 6G
+                reservations:
+                    cpus: '2.0'
+                    memory: 4G
+
+        # Optional: Network configuration
+        networks:
+            - runner-network
+
+        # Optional: Security options
+        # security_opt:
+        #    - no-new-privileges:true
+
+    # Optional: Multiple runners
+    oraculum-github-runner:
+        image: myoung34/github-runner:latest
+        container_name: oraculum-github-runner
+        environment:
+            REPO_URL: https://github.com/alexzedim/oraculum
+            ACCESS_TOKEN: ${GITHUB_TOKEN}
+            RUNNER_NAME: oraculum-runner
+            RUNNER_LABELS: docker,linux,self-hosted,oraculum
+            RUNNER_REPLACE_EXISTING: true
+            DOCKER_ENABLED: true
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - oraculum-runner-work:/tmp/runner/work
+            - ./builds:/builds
+        restart: always
+        networks:
+            - runner-network
+
+volumes:
+    cmnw-runner-work:
+        driver: local
+    oraculum-runner-work:
+        driver: local
+    github-runner-cache:
+        driver: local
+
+networks:
+    runner-network:
+        driver: bridge
