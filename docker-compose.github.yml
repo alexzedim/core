@@ -84,7 +84,7 @@ services:
         networks:
             - runner-network
 
-    cmnw-github-runner-IIШ:
+    cmnw-github-runner-III:
         image: myoung34/github-runner:latest
         container_name: cmnw-github-runner-III
         environment:
