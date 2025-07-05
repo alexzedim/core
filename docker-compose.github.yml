@@ -85,13 +85,29 @@ services:
             - runner-network
 
     # Optional: Multiple runners
-    oraculum-github-runner:
+    oraculum-github-runner-I:
         image: myoung34/github-runner:latest
-        container_name: oraculum-github-runner
+        container_name: oraculum-github-runner-I
         environment:
             REPO_URL: https://github.com/alexzedim/oraculum
             ACCESS_TOKEN: ${GITHUB_TOKEN}
-            RUNNER_NAME: oraculum-runner
+            RUNNER_NAME: oraculum-runner-I
+            RUNNER_LABELS: docker,linux,self-hosted,oraculum
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - oraculum-runner-work:/tmp/runner/work
+            - ./builds:/builds
+        restart: always
+        networks:
+            - runner-network
+
+    oraculum-github-runner-II:
+        image: myoung34/github-runner:latest
+        container_name: oraculum-github-runner-II
+        environment:
+            REPO_URL: https://github.com/alexzedim/oraculum
+            ACCESS_TOKEN: ${GITHUB_TOKEN}
+            RUNNER_NAME: oraculum-runner-II
             RUNNER_LABELS: docker,linux,self-hosted,oraculum
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
