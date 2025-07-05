@@ -84,6 +84,32 @@ services:
         networks:
             - runner-network
 
+    cmnw-github-runner-IIШ:
+        image: myoung34/github-runner:latest
+        container_name: cmnw-github-runner-III
+        environment:
+            REPO_URL: https://github.com/alexzedim/cmnw
+            ACCESS_TOKEN: ${GITHUB_TOKEN}
+            RUNNER_NAME: cmnw-runner-III
+            RUNNER_LABELS: docker,linux,self-hosted,cmnw
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - cmnw-runner-work:/tmp/runner/work
+            - ./builds:/builds
+            - cmnw-runner-work:/home/runner/.cache
+        restart: always
+        deploy:
+            resources:
+                limits:
+                    cpus: '4.0'
+                    memory: 6G
+                reservations:
+                    cpus: '2.0'
+                    memory: 4G
+
+        networks:
+            - runner-network
+
     # Optional: Multiple runners
     oraculum-github-runner-I:
         image: myoung34/github-runner:latest
