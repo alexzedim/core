@@ -2,7 +2,7 @@ name: 'github'
 version: '3.8'
 services:
     cmnw-github-runner:
-        image: myoung34/github-runner:ubuntu-noble
+        image: myoung34/github-runner:latest
         container_name: cmnw-github-runner
         environment:
             # Required: Your GitHub repository or organization
