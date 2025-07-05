@@ -36,7 +36,7 @@ services:
             - ./builds:/builds
 
             # Optional: Cache directories for faster builds
-            - github-runner-cache:/home/runner/.cache
+            - cmnw-runner-work:/home/runner/.cache
 
         restart: always
 
