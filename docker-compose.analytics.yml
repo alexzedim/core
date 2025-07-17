@@ -125,3 +125,14 @@ configs:
           scrape_interval: 15s
           metrics_path: /metrics
           scheme: http
+
+      - job_name: 'minio'
+        bearer_token: <secret>
+        metrics_path: /minio/v2/metrics/cluster
+        scheme: http
+        static_configs:
+          - targets: ['128.0.0.255:9000']
+
+      - job_name: 'traefik'
+        static_configs:
+          - targets: ['128.0.0.255:8082']
