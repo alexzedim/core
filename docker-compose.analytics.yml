@@ -115,7 +115,7 @@ configs:
 
         - job_name: 'postgres'
           static_configs:
-            - targets: ['postgres_exporter:9187']
+            - targets: ['128.0.0.255:9187']
           scrape_interval: 15s
           metrics_path: /metrics
 
