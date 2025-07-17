@@ -41,7 +41,7 @@ services:
             - "--log.level=INFO"
 
             # Prometheus Metrics
-            - "--metrics.prometheus=true"
+            - "--metrics.prometheus.enabled=true"
             - "--metrics.prometheus.addEntryPointsLabels=true"
             - "--metrics.prometheus.addServicesLabels=true"
             - "--metrics.prometheus.addRoutersLabels=true"
@@ -64,9 +64,6 @@ services:
             - "traefik.http.routers.traefik.tls=true"
             - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
             - "traefik.http.routers.traefik.service=api@internal"
-            # Basic Auth middleware
-            - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
-            - "traefik.http.routers.traefik.middlewares=auth"
         networks:
             - traefik
 
