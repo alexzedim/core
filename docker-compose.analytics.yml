@@ -115,13 +115,13 @@ configs:
 
         - job_name: 'postgres'
           static_configs:
-            - targets: ['127.0.0.1:9187']
-          scrape_interval: 30s
+            - targets: ['postgres_exporter:9187']
+          scrape_interval: 15s
           metrics_path: /metrics
 
         - job_name: 'rabbitmq'
           static_configs:
-            - targets: ['127.0.0.1:15692']
+            - targets: ['rabbitmq:15692']
           scrape_interval: 15s
           metrics_path: /metrics
           scheme: http
