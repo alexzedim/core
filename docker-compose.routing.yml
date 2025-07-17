@@ -4,27 +4,56 @@ services:
     traefik:
         image: traefik:v3.4
         container_name: traefik
+        restart: always
         environment:
             - TZ=${TZ}
         command:
-            # Main configuration file
-            - "--configfile=/etc/traefik/traefik.yml"
-            # Enable file provider for dynamic configuration
-            - "--providers.file.directory=/etc/traefik/"
-            - "--providers.file.watch=true"
-            # Enable Docker provider
-            - "--providers.docker=true"
-            - "--providers.docker.exposedbydefault=false"
-            # Enable API and dashboard
+            # API and Dashboard
             - "--api.dashboard=true"
             - "--api.insecure=false"
+
+            # Entry Points
+            - "--entrypoints.web.address=:80"
+            - "--entrypoints.websecure.address=:443"
+
+            # HTTP to HTTPS redirect
+            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+            # Providers
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+
+            # Let's Encrypt
+            - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+            - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+            - "--certificatesresolvers.letsencrypt.acme.email=alexzedim@gmail.com"
+            - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+
+            # Global settings
+            - "--global.checknewversion=false"
+            - "--global.sendanonymoususage=false"
+
+            # Logging (optional)
+            - "--log.level=INFO"
         ports:
             - '80:80'
             - '443:443'
             - '9000:8080'
         volumes:
             # Mount entire traefik config directory
-            - /opt/appdata/traefik:/etc/traefik/traefik:ro
+            # Changed to rw for ACME storage
+            - /opt/appdata/traefik:/etc/traefik:rw
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - traefik-letsencrypt:/letsencrypt
         labels:
-            # Enable Traefik for this service
             - "traefik.enable=true"
+            # Dashboard configuration
+            - "traefik.http.routers.traefik.rule=Host(`traefik.cmnw.ru`)"
+            - "traefik.http.routers.traefik.entrypoints=websecure"
+            - "traefik.http.routers.traefik.tls=true"
+            - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.traefik.service=api@internal"
+
+volumes:
+    traefik-letsencrypt:
