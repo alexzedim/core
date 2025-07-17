@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:lts
+    container_name: portainer
+    restart: always
+    ports:
+      - "8000:8000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    networks:
+      - bridge
+    labels:
+      - "com.docker.desktop.extension.api.version=>= 0.2.2"
+      - "com.docker.desktop.extension.icon=https://raw.githubusercontent.com/alexzedim/core/refs/heads/master/icons/cmnw-logo.png"
+      - "io.portainer.server=true"
+      - "org.opencontainers.image.description=Docker container management made simple, with the world's most popular GUI-based container management platform."
+      - "org.opencontainers.image.title=Portainer"
+      - "org.opencontainers.image.vendor=Portainer.io"
+
+volumes:
+  portainer_data:
+    external: true
+
+networks:
+  bridge:
+    external: true
