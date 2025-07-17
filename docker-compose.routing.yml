@@ -7,6 +7,9 @@ services:
         restart: always
         environment:
             - TZ=${TZ}
+            - TRAEFIK_AUTH=${TRAEFIK_AUTH}
+            - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+            - TRAEFIK_DOMAIN=${TRAEFIK_DOMAIN}
         command:
             # API and Dashboard
             - "--api.dashboard=true"
@@ -27,7 +30,7 @@ services:
             # Let's Encrypt
             - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
             - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-            - "--certificatesresolvers.letsencrypt.acme.email=alexzedim@gmail.com"
+            - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
             - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
 
             # Global settings
@@ -36,10 +39,18 @@ services:
 
             # Logging (optional)
             - "--log.level=INFO"
+
+            # Prometheus Metrics
+            - "--metrics.prometheus=true"
+            - "--metrics.prometheus.addEntryPointsLabels=true"
+            - "--metrics.prometheus.addServicesLabels=true"
+            - "--metrics.prometheus.addRoutersLabels=true"
+            - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
         ports:
             - '80:80'
             - '443:443'
             - '5000:8080'
+            - '8082:8082'  # Prometheus metrics port
         volumes:
             # Mount entire traefik config directory
             # Changed to rw for ACME storage
@@ -48,11 +59,14 @@ services:
         labels:
             - "traefik.enable=true"
             # Dashboard configuration
-            - "traefik.http.routers.traefik.rule=Host(`traefik.cmnw.ru`)"
+            - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN}`)"
             - "traefik.http.routers.traefik.entrypoints=websecure"
             - "traefik.http.routers.traefik.tls=true"
             - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
             - "traefik.http.routers.traefik.service=api@internal"
+            # Basic Auth middleware
+            - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
+            - "traefik.http.routers.traefik.middlewares=auth"
         networks:
             - traefik
 
