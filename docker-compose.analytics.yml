@@ -76,10 +76,21 @@ services:
       - grafana:/var/lib/grafana
     networks:
       - loki
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.cmnw.ru`)"
+      - "traefik.http.routers.grafana.entrypoints=web,websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
 networks:
   loki:
     driver: bridge
+  # Traefik egress
+  traefik:
+    external: true
 
 volumes:
   grafana:
