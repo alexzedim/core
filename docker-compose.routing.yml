@@ -53,6 +53,12 @@ services:
             - "traefik.http.routers.traefik.tls=true"
             - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
             - "traefik.http.routers.traefik.service=api@internal"
+        networks:
+            - traefik
 
 volumes:
     traefik-letsencrypt:
+
+networks:
+    traefik:
+        external: true
