@@ -1,5 +1,5 @@
+name: control
 version: '3.8'
-
 services:
   portainer:
     image: portainer/portainer-ce:lts
@@ -14,9 +14,8 @@ services:
     environment:
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     networks:
-      - bridge
+      - traefik
     labels:
-      - "com.docker.desktop.extension.api.version=>= 0.2.2"
       - "com.docker.desktop.extension.icon=https://raw.githubusercontent.com/alexzedim/core/refs/heads/master/icons/cmnw-logo.png"
       - "io.portainer.server=true"
       - "org.opencontainers.image.description=Docker container management made simple, with the world's most popular GUI-based container management platform."
@@ -34,5 +33,5 @@ volumes:
     external: true
 
 networks:
-  bridge:
+  traefik:
     external: true
