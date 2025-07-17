@@ -39,7 +39,7 @@ services:
         ports:
             - '80:80'
             - '443:443'
-            - '9000:8080'
+            - '5000:8080'
         volumes:
             # Mount entire traefik config directory
             # Changed to rw for ACME storage
