@@ -74,5 +74,5 @@ volumes:
     traefik-letsencrypt:
 
 networks:
-    bridge:
+    traefik:
         external: true
