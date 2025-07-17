@@ -44,7 +44,7 @@ services:
             # Mount entire traefik config directory
             # Changed to rw for ACME storage
             - /opt/appdata/traefik:/etc/traefik:rw
-            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /var/run/docker.sock:/var/run/docker.sock:rw
             - traefik-letsencrypt:/letsencrypt
         labels:
             - "traefik.enable=true"
