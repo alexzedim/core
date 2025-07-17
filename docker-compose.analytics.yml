@@ -121,7 +121,7 @@ configs:
 
         - job_name: 'rabbitmq'
           static_configs:
-            - targets: ['rabbitmq:15692']
+            - targets: ['128.0.0.255:15692']
           scrape_interval: 15s
           metrics_path: /metrics
           scheme: http
