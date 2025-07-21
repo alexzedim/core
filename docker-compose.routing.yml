@@ -8,7 +8,6 @@ services:
         environment:
             - TZ=${TZ}
             - TRAEFIK_AUTH=${TRAEFIK_AUTH}
-            - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
             - TRAEFIK_DOMAIN=${TRAEFIK_DOMAIN}
         command:
             # API and Dashboard
@@ -19,25 +18,15 @@ services:
             - "--entrypoints.web.address=:80"
             - "--entrypoints.websecure.address=:443"
 
-            # HTTP to HTTPS redirect
-            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-
             # Providers
             - "--providers.docker=true"
             - "--providers.docker.exposedbydefault=false"
-
-            # Let's Encrypt
-            - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-            - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-            - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
-            - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
 
             # Global settings
             - "--global.checknewversion=false"
             - "--global.sendanonymoususage=false"
 
-            # Logging (optional)
+            # Logging
             - "--log.level=INFO"
 
             # Prometheus Metrics
@@ -52,23 +41,15 @@ services:
             - '5000:8080'
             - '8082:8082'  # Prometheus metrics port
         volumes:
-            # Mount entire traefik config directory
-            # Changed to rw for ACME storage
             - /var/run/docker.sock:/var/run/docker.sock:ro
-            - traefik-letsencrypt:/letsencrypt
         labels:
             - "traefik.enable=true"
             # Dashboard configuration
             - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN}`)"
             - "traefik.http.routers.traefik.entrypoints=websecure"
-            - "traefik.http.routers.traefik.tls=true"
-            - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
             - "traefik.http.routers.traefik.service=api@internal"
         networks:
             - traefik
-
-volumes:
-    traefik-letsencrypt:
 
 networks:
     traefik:
