@@ -7,35 +7,46 @@ services:
     volumes:
       - home-assistant:/config
       - /etc/localtime:/etc/localtime:ro
-    restart: unless-stopped
-    depends_on:
-      - mosquitto
-      - zigbee2mqtt
+      # Uncomment the line below if you need D-Bus for Bluetooth or other integrations
+      # - /var/run/dbus:/var/run/dbus:ro
+    ports:
+      - "8123:8123"
     environment:
-      - TZ=Europe/Moscow
-    privileged: true
-    network_mode: host
+      - TZ=${TZ}
+    privileged: true # This can be useful for certain hardware integrations, but use with caution. Consider 'devices' for specific hardware passthrough instead.
+    restart: unless-stopped
+    network_mode: host # Recommended for easier device discovery and integrations. If you use 'bridge' mode, you'll need to map all necessary ports.
+    # If you need to pass through specific USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
 
   mosquitto:
     container_name: mosquitto
     image: eclipse-mosquitto:latest
-    restart: unless-stopped
-    ports:
-      - "1883:1883"
     command: "mosquitto -c /mosquitto-no-auth.conf"
     volumes:
+      - mosquitto:/mosquitto/config
       - mosquitto:/mosquitto/data
+      - mosquitto:/mosquitto/log
+    ports:
+      - "1883:1883" # MQTT
+      # - "9001:9001"
+      # Websockets for MQTT
+    restart: unless-stopped
 
   node-red:
-    container_name: nodered
-    image: nodered/node-red:latest
-    restart: unless-stopped
+    container_name: node-red
+    image: node-red/node-red:latest
     environment:
       - TZ=${TZ}
+    volumes:
+      -  node-red:/data
     ports:
       - "1880:1880"
-    volumes:
-      - nodered:/data
+    depends_on:
+      - home-assistant
+      - mosquitto
+    restart: unless-stopped
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
@@ -81,23 +92,11 @@ services:
     ports:
       - "8086:8086"
 
-  code-server:
-    container_name: code_server
-    image: lscr.io/linuxserver/code-server:latest
-    env_file:
-      - stack.env
-    ports:
-      - "8443:8443"
-    volumes:
-      - ./hass-config:/config
-    restart: unless-stopped
-
 volumes:
   home-assistant:
-  nodered:
+  node-red:
   zigbee2mqtt:
   zwavejsui:
   mosquitto:
   influxdb-data:
   influxdb-config:
-  grafana:

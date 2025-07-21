@@ -85,17 +85,16 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
+  # Traefik egress
 networks:
   loki:
     driver: bridge
-  # Traefik egress
   traefik:
     external: true
 
 volumes:
   grafana:
   prometheus_data:
-
 
 configs:
   prometheus_config:
@@ -136,3 +135,15 @@ configs:
         - job_name: 'traefik'
           static_configs:
             - targets: ['128.0.0.255:8082']
+
+        - job_name: 'home-assistant'
+          metrics_path: /api/prometheus
+          scheme: http
+          static_configs:
+            - targets: ['128.0.0.255:8123']
+          # If Home Assistant's /api/prometheus requires authentication (not using requires_auth: false)
+          # uncomment and configure one of the following:
+          # authorization:
+          #   credentials: 'YOUR_LONG_LIVED_ACCESS_TOKEN' # Replace with your HA token
+          # OR (for older Prometheus versions, less secure)
+          # bearer_token: 'YOUR_LONG_LIVED_ACCESS_TOKEN'
