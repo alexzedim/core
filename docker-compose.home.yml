@@ -36,7 +36,7 @@ services:
 
   node-red:
     container_name: node-red
-    image: node-red/node-red:latest
+    image: nodered/node-red:latest
     environment:
       - TZ=${TZ}
     volumes:
