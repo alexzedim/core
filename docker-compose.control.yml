@@ -24,8 +24,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.control.rule=Host(`control.cmnw.ru`)"
       - "traefik.http.routers.control.entrypoints=web,websecure"
-      - "traefik.http.routers.control.tls=true"
-      - "traefik.http.routers.control.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.control.service=control"
       - "traefik.http.services.control.loadbalancer.server.port=8000"
 
 volumes:
