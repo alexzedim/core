@@ -23,9 +23,11 @@ services:
       - "org.opencontainers.image.vendor=Portainer.io"
       - "traefik.enable=true"
       - "traefik.http.routers.control.rule=Host(`control.cmnw.ru`)"
-      - "traefik.http.routers.control.entrypoints=web,websecure"
+      - "traefik.http.routers.control.entrypoints=websecure"
       - "traefik.http.routers.control.service=control"
-      - "traefik.http.services.control.loadbalancer.server.port=8000"
+      - "traefik.http.routers.control.tls=true"
+      - "traefik.http.routers.control.tls.certresolver=letsencrypt"
+      - "traefik.http.services.control.loadbalancer.server.port=9000"
 
 volumes:
   portainer_data:

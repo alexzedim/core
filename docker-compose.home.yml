@@ -19,6 +19,20 @@ services:
     # If you need to pass through specific USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
     # devices:
     #   - /dev/ttyUSB0:/dev/ttyUSB0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homeassistant.rule=Host(`home.cmnw.ru`)"  # Add home.cmnw.ru to DNS
+      - "traefik.http.routers.homeassistant.entrypoints=websecure"
+      - "traefik.http.routers.homeassistant.service=homeassistant"
+      - "traefik.http.routers.homeassistant.tls=true"
+      - "traefik.http.routers.homeassistant.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+      # Home Assistant specific headers
+      - "traefik.http.routers.homeassistant.middlewares=homeassistant-headers"
+      - "traefik.http.middlewares.homeassistant-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.homeassistant-headers.headers.customrequestheaders.X-Forwarded-For="
+    networks:
+      - traefik  # Add traefik network
 
   mosquitto:
     container_name: mosquitto
@@ -47,6 +61,19 @@ services:
       - home-assistant
       - mosquitto
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nodered.rule=Host(`nodered.cmnw.ru`)"  # Add nodered.cmnw.ru to DNS
+      - "traefik.http.routers.nodered.entrypoints=websecure"
+      - "traefik.http.routers.nodered.service=nodered"
+      - "traefik.http.routers.nodered.tls=true"
+      - "traefik.http.routers.nodered.tls.certresolver=letsencrypt"
+      - "traefik.http.services.nodered.loadbalancer.server.port=1880"
+      # Optional: Add basic auth protection
+      - "traefik.http.routers.nodered.middlewares=nodered-auth"
+      - "traefik.http.middlewares.nodered-auth.basicauth.users=${TRAEFIK_AUTH}"
+    networks:
+      - traefik  # Add traefik network
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
