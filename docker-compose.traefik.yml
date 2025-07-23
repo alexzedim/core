@@ -49,9 +49,6 @@ services:
             - "--metrics.prometheus.addServicesLabels=true"
             - "--metrics.prometheus.addRoutersLabels=true"
             - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
-
-            # Pilot token (optional, remove if you don't want to use Traefik Pilot)
-            - "--pilot.dashboard=false"
         ports:
             - '80:80'
             - '443:443'
