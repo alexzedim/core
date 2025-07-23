@@ -142,7 +142,7 @@ services:
         restart: always
         networks:
             - runner-network
-            -
+
     # Dify Runner
     dify-github-runner-I:
         image: myoung34/github-runner:latest
