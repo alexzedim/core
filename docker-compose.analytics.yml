@@ -41,6 +41,7 @@ services:
       - '--web.enable-lifecycle'
     networks:
       - loki
+      - traefik
 
   postgres_exporter:
     container_name: postgres_exporter
@@ -70,6 +71,9 @@ services:
       GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
       GF_ANALYTICS_CHECK_FOR_UPDATES: false
       GF_INSTALL_IMAGE_RENDERER_PLUGIN: false
+      # Force Grafana to trust the proxy (Traefik) for HTTPS
+      GF_SERVER_ROOT_URL: https://grafana.cmnw.ru
+      GF_SERVER_PROTOCOL: http
     ports:
       - '3000:3000'
     volumes:
@@ -80,8 +84,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.cmnw.ru`)"
-      - "traefik.http.routers.grafana.entrypoints=web,websecure"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.service=grafana"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   # Traefik egress
