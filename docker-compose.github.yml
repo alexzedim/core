@@ -142,11 +142,30 @@ services:
         restart: always
         networks:
             - runner-network
+            -
+    # Dify Runner
+    dify-github-runner-I:
+        image: myoung34/github-runner:latest
+        container_name: dify-github-runner-I
+        environment:
+            REPO_URL: https://github.com/alexzedim/dify
+            ACCESS_TOKEN: ${GITHUB_TOKEN}
+            RUNNER_NAME: dify
+            RUNNER_LABELS: docker,linux,self-hosted,dify
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - dify-runner-work:/tmp/runner/work
+            - ./builds:/builds
+        restart: always
+        networks:
+            - runner-network
 
 volumes:
     cmnw-runner-work:
         driver: local
     oraculum-runner-work:
+        driver: local
+    dify-runner-work:
         driver: local
 
 networks:
