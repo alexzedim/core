@@ -57,30 +57,6 @@ http:
             tls:
                 options: cloudflare-tls
 
-        # Home Assistant Router
-        home-assistant:
-            rule: "Host(`home.cmnw.ru`)"
-            entryPoints:
-                - websecure
-            service: home-assistant
-            middlewares:
-                - home-assistant-headers
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
-        # Node-RED Router
-        nodered:
-            rule: "Host(`nodered.cmnw.ru`)"
-            entryPoints:
-                - websecure
-            service: nodered
-            middlewares:
-                - node-red-auth
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
         # Prometheus Router (optional, for monitoring)
         prometheus:
             rule: "Host(`prometheus.cmnw.ru`)"
@@ -128,21 +104,6 @@ http:
                 servers:
                     - url: "http://minio:9001"
 
-        # Home Assistant Service
-        home-assistant:
-            loadBalancer:
-                servers:
-                    - url: "http://home-assistant:8123"
-                healthCheck:
-                    path: /api/
-                    interval: 30s
-
-        # Node-RED Service
-        node-red:
-            loadBalancer:
-                servers:
-                    - url: "http://node-red:1880"
-
         # Prometheus Service
         prometheus:
             loadBalancer:
@@ -172,20 +133,6 @@ http:
                     Referrer-Policy: "strict-origin-when-cross-origin"
                     Permissions-Policy: "camera=(), microphone=(), geolocation=()"
                 contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
-
-        # Home Assistant specific headers
-        home-assistant-headers:
-            headers:
-                customRequestHeaders:
-                    X-Forwarded-Proto: "https"
-                    X-Forwarded-For: ""
-                    X-Real-IP: ""
-
-        # Node-RED basic auth
-        node-red-auth:
-            basicAuth:
-                users:
-                    - "admin:$2y$10$..." # Replace with your actual hash
 
         # Rate limiting middleware (optional)
         rate-limit:
