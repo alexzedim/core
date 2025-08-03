@@ -16,24 +16,6 @@ services:
             - minio-s3:/bitnami/minio/data
         networks:
             - traefik
-        labels:
-            - "traefik.enable=true"
-
-            # MinIO API (S3 compatible) with SSL
-            - "traefik.http.routers.minio-api.rule=Host(`s3.cmnw.ru`)"
-            - "traefik.http.routers.minio-api.entrypoints=websecure"
-            - "traefik.http.routers.minio-api.service=minio-api"
-            - "traefik.http.routers.minio-api.tls=true"
-            - "traefik.http.routers.minio-api.tls.certresolver=letsencrypt"
-            - "traefik.http.services.minio-api.loadbalancer.server.port=9000"
-
-            # MinIO Console with SSL
-            - "traefik.http.routers.minio-console.rule=Host(`console-s3.cmnw.ru`)"
-            - "traefik.http.routers.minio-console.entrypoints=websecure"
-            - "traefik.http.routers.minio-console.service=minio-console"
-            - "traefik.http.routers.minio-console.tls=true"
-            - "traefik.http.routers.minio-console.tls.certresolver=letsencrypt"
-            - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
 
 volumes:
     minio-s3:

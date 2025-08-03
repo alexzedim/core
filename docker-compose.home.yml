@@ -19,18 +19,6 @@ services:
     # If you need to pass through specific USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
     # devices:
     #   - /dev/ttyUSB0:/dev/ttyUSB0
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.homeassistant.rule=Host(`home.cmnw.ru`)"  # Add home.cmnw.ru to DNS
-      - "traefik.http.routers.homeassistant.entrypoints=websecure"
-      - "traefik.http.routers.homeassistant.service=homeassistant"
-      - "traefik.http.routers.homeassistant.tls=true"
-      - "traefik.http.routers.homeassistant.tls.certresolver=letsencrypt"
-      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
-      # Home Assistant specific headers
-      - "traefik.http.routers.homeassistant.middlewares=homeassistant-headers"
-      - "traefik.http.middlewares.homeassistant-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.homeassistant-headers.headers.customrequestheaders.X-Forwarded-For="
     networks:
       - traefik  # Add traefik network
 

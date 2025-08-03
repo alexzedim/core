@@ -21,13 +21,6 @@ services:
       - "org.opencontainers.image.description=Docker container management made simple, with the world's most popular GUI-based container management platform."
       - "org.opencontainers.image.title=Portainer"
       - "org.opencontainers.image.vendor=Portainer.io"
-      - "traefik.enable=true"
-      - "traefik.http.routers.control.rule=Host(`control.cmnw.ru`)"
-      - "traefik.http.routers.control.entrypoints=websecure"
-      - "traefik.http.routers.control.service=control"
-      - "traefik.http.routers.control.tls=true"
-      - "traefik.http.routers.control.tls.certresolver=letsencrypt"
-      - "traefik.http.services.control.loadbalancer.server.port=9000"
 
 volumes:
   portainer_data:
