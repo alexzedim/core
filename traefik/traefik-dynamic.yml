@@ -163,8 +163,7 @@ tls:
         # Wildcard certificate for *.cmnw.ru
         - certFile: /certificates/cmnw.ru.pem
           keyFile: /certificates/cmnw.ru.key
-          stores:
-              - cloudflare-tls
+        # Fixed: Remove the stores section as it's not needed here
 
     options:
         cloudflare-tls:
