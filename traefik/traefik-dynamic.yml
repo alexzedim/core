@@ -1,4 +1,4 @@
-# traefik-dynamic.yml - Enhanced dynamic configuration
+# traefik-dynamic.yml - Enhanced dynamic configuration with Cloudflare Origin Certificates
 http:
     routers:
         # Traefik Dashboard Router
@@ -11,11 +11,7 @@ http:
                 - traefik-auth
                 - security-headers
             tls:
-                certResolver: letsencrypt
-                domains:
-                    - main: "cmnw.ru"
-                      sans:
-                          - "*.cmnw.ru"
+                options: cloudflare-tls
 
         # Grafana Router
         grafana:
@@ -26,7 +22,7 @@ http:
             middlewares:
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # Portainer Router
         portainer:
@@ -37,7 +33,7 @@ http:
             middlewares:
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # MinIO API Router
         minio-api:
@@ -48,7 +44,7 @@ http:
             middlewares:
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # MinIO Console Router
         minio-console:
@@ -59,7 +55,7 @@ http:
             middlewares:
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # Home Assistant Router
         home-assistant:
@@ -71,7 +67,7 @@ http:
                 - home-assistant-headers
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # Node-RED Router
         nodered:
@@ -83,7 +79,7 @@ http:
                 - node-red-auth
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
         # Prometheus Router (optional, for monitoring)
         prometheus:
@@ -95,7 +91,7 @@ http:
                 - traefik-auth
                 - security-headers
             tls:
-                certResolver: letsencrypt
+                options: cloudflare-tls
 
     services:
         # Grafana Service
@@ -214,9 +210,28 @@ http:
                 accessControlMaxAge: 100
                 addVaryHeader: true
 
-# TLS Configuration
+# TLS Configuration with Cloudflare Origin Certificates
 tls:
+    certificates:
+        # Wildcard certificate for *.cmnw.ru
+        - certFile: /certificates/cmnw.ru.pem
+          keyFile: /certificates/cmnw.ru.key
+          stores:
+              - default
+
     options:
+        cloudflare-tls:
+            minVersion: "VersionTLS12"
+            cipherSuites:
+                - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+                - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+                - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+                - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+            curvePreferences:
+                - "CurveP521"
+                - "CurveP384"
+            sniStrict: true
+
         default:
             minVersion: "VersionTLS12"
             cipherSuites:

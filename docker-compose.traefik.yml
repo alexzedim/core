@@ -8,7 +8,7 @@ services:
         environment:
             # Only environment variables needed for providers
             - TZ=${TZ}
-            - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+            # Removed CF_DNS_API_TOKEN as we're not using ACME anymore
         # No command arguments - everything is in config files
         ports:
             - '80:80'          # HTTP
@@ -17,10 +17,11 @@ services:
             - '8082:8082'      # Prometheus metrics
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
-            - traefik-certificates:/certificates
             - traefik-logs:/var/log/traefik
             # Mount both configuration directory
             - traefik-config:/etc/traefik:ro
+            # Mount your Cloudflare certificates
+            - traefik-certificates:/certificates
         networks:
             - traefik
         healthcheck:
