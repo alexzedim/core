@@ -190,12 +190,3 @@ tls:
                 - "CurveP521"
                 - "CurveP384"
             sniStrict: true
-
-# TCP/UDP routing (if needed)
-tcp:
-    routers: {}
-    services: {}
-
-udp:
-    routers: {}
-    services: {}
