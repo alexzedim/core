@@ -50,7 +50,6 @@ providers:
 # Logging
 log:
     level: INFO
-    filePath: /var/log/traefik/traefik.log
 
 # Access logs
 accessLog:
