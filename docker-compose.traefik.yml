@@ -20,7 +20,7 @@ services:
             - traefik-certificates:/certificates
             - traefik-logs:/var/log/traefik
             # Mount both configuration files
-            - traefik-config:/etc/traefik/traefik-static.yml:ro
+            - traefik-config:/etc/traefik/traefik.yml:ro
             - traefik-config:/etc/traefik/traefik-dynamic.yml:ro
         networks:
             - traefik
