@@ -6,77 +6,37 @@ services:
         container_name: traefik
         restart: always
         environment:
+            # Only environment variables needed for providers
             - TZ=${TZ}
-            - TRAEFIK_AUTH=${TRAEFIK_AUTH}
-            - TRAEFIK_DOMAIN=${TRAEFIK_DOMAIN}
-            - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}  # Cloudflare API token for DNS challenge
-        command:
-            # API and Dashboard
-            - "--api.dashboard=true"
-            - "--api.insecure=false"
-
-            # Entry Points
-            - "--entrypoints.web.address=:80"
-            - "--entrypoints.websecure.address=:443"
-
-            # Redirect HTTP to HTTPS globally
-            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-            - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-
-            # Providers
-            - "--providers.docker=true"
-            - "--providers.docker.exposedbydefault=false"
-
-            # Certificate Resolvers - Let's Encrypt with DNS Challenge
-            - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
-            - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
-            - "--certificatesresolvers.letsencrypt.acme.email=admin@cmnw.ru"
-            - "--certificatesresolvers.letsencrypt.acme.storage=/certificates/acme.json"
-            - "--certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-
-            # Global settings
-            - "--global.checknewversion=false"
-            - "--global.sendanonymoususage=false"
-
-            # Logging
-            - "--log.level=INFO"
-            - "--accesslog=true"
-
-            # Prometheus Metrics
-            - "--metrics.prometheus=true"
-            - "--metrics.prometheus.addEntryPointsLabels=true"
-            - "--metrics.prometheus.addServicesLabels=true"
-            - "--metrics.prometheus.addRoutersLabels=true"
-            - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+            - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+        # No command arguments - everything is in config files
         ports:
-            - '80:80'
-            - '443:443'
-            - '5000:8080'
-            - '8082:8082'  # Prometheus metrics port
+            - '80:80'          # HTTP
+            - '443:443'        # HTTPS
+            - '8080:8080'      # Traefik API/Dashboard
+            - '8082:8082'      # Prometheus metrics
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - traefik-certificates:/certificates
-        labels:
-            - "traefik.enable=true"
-
-            # Dashboard configuration with SSL
-            - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN}`)"
-            - "traefik.http.routers.traefik.entrypoints=websecure"
-            - "traefik.http.routers.traefik.service=api@internal"
-            - "traefik.http.routers.traefik.tls=true"
-            - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
-            - "traefik.http.routers.traefik.tls.domains[0].main=cmnw.ru"
-            - "traefik.http.routers.traefik.tls.domains[0].sans=*.cmnw.ru"
-
-            # Dashboard authentication (using basic auth)
-            - "traefik.http.routers.traefik.middlewares=auth"
-            - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
+            - traefik-logs:/var/log/traefik
+            # Mount both configuration files
+            - traefik-config:/etc/traefik/traefik.yml:ro
+            - traefik-config:/etc/traefik/traefik-dynamic.yml:ro
         networks:
             - traefik
+        healthcheck:
+            test: ["CMD", "traefik", "healthcheck", "--ping"]
+            interval: 30s
+            timeout: 3s
+            retries: 3
+            start_period: 10s
 
 volumes:
     traefik-certificates:
+        driver: local
+    traefik-logs:
+        driver: local
+    traefik-config:
         driver: local
 
 networks:
