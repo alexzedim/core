@@ -2,7 +2,7 @@ name: 's3'
 version: '3.8'
 services:
     minio:
-        image: bitnami/minio:latest
+        image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
         container_name: minio
         restart: always
         ports:
