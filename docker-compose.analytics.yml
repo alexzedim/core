@@ -96,6 +96,7 @@ services:
       - grafana
     networks:
       - loki
+      - traefik
 
   # Traefik egress
 networks:
