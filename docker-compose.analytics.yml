@@ -83,20 +83,19 @@ services:
       - traefik
 
   mcp-grafana:
-      container_name: mcp-grafana
-      image: mcp/grafana:latest
-      restart: always
-      environment:
-        GRAFANA_URL: ${GRAFANA_URL}
-        GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
-      ports:
-        - '8001:8001'
-      command: ["--transport", "sse", "--address", "0.0.0.0:8001"]
-      depends_on:
-        - grafana
-      networks:
-        - loki
-        - traefik
+    container_name: mcp-grafana
+    image: mcp/grafana:latest
+    restart: always
+    environment:
+      GRAFANA_URL: ${GRAFANA_URL}
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
+    ports:
+      - '8001:8001'
+    command: ["--transport", "sse", "--address", "0.0.0.0:8001"]
+    depends_on:
+      - grafana
+    networks:
+      - loki
 
   # Traefik egress
 networks:
