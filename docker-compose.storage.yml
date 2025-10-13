@@ -65,6 +65,11 @@ networks:
 
 volumes:
   postgres:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/postgres-data
   redis:
   bull-mq:
   minio-s3:
