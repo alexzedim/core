@@ -67,9 +67,9 @@ volumes:
   postgres:
     driver: local
     driver_opts:
-      type: none
-      o: bind
-      device: /mnt/postgres
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/postgres'
   redis:
   bull-mq:
   minio-s3:
