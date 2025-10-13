@@ -143,19 +143,16 @@ services:
         networks:
             - runner-network
 
-    # Dify Runner
-    dify-github-runner-I:
-        image: myoung34/github-runner:latest
-        container_name: dify-github-runner-I
+    github-mcp-server:
+        image: mcp/github:latest
+        container_name: github-mcp-server
         environment:
-            REPO_URL: https://github.com/alexzedim/dify
-            ACCESS_TOKEN: ${GITHUB_TOKEN}
-            RUNNER_NAME: dify
-            RUNNER_LABELS: docker,linux,self-hosted,dify
+            GITHUB_TOKEN: ${GITHUB_TOKEN}
+            MCP_SERVER_NAME: github
+        ports:
+            - "3001:3000"
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-            - dify-runner-work:/tmp/runner/work
-            - ./builds:/builds
+            - mcp-github-data:/data
         restart: always
         networks:
             - runner-network
@@ -165,7 +162,7 @@ volumes:
         driver: local
     oraculum-runner-work:
         driver: local
-    dify-runner-work:
+    mcp-github-data:
         driver: local
 
 networks:
