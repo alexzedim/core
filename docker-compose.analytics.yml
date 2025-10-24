@@ -162,7 +162,7 @@ configs:
 
         - job_name: 'cmnw-api'
           static_configs:
-            - targets: ['128.0.0.255:3000']
+            - targets: ['128.0.0.255:8080']
           scrape_interval: 15s
           metrics_path: /metrics
           scheme: http
