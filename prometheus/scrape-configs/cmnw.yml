@@ -1,6 +1,6 @@
 - job_name: 'cmnw-api'
   static_configs:
-    - targets: ['128.0.0.255:3000']  # Change to your CMNW API host:port
+    - targets: ['128.0.0.255:8080']  # CMNW API on port 8080
   scrape_interval: 15s
   metrics_path: /metrics
   scheme: http
