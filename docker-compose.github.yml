@@ -144,7 +144,7 @@ services:
             - runner-network
 
     github-mcp-server:
-        image: mcp/github:latest
+        image: ghcr.io/github/github-mcp-server
         container_name: github-mcp-server
         environment:
             MCP_SERVER_NAME: github
