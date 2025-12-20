@@ -147,8 +147,8 @@ services:
         image: mcp/github:latest
         container_name: github-mcp-server
         environment:
-            GITHUB_TOKEN: ${GITHUB_TOKEN}
             MCP_SERVER_NAME: github
+            GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
         ports:
             - "3001:3000"
         volumes:
