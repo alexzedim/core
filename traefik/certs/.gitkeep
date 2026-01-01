@@ -1,0 +1,3 @@
+# This file preserves the directory structure
+# Certificate files (.pem, .key) are gitignored for security
+# Install certificates as documented in CERTIFICATE_SETUP.md
