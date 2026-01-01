@@ -1,53 +1,6 @@
 # traefik-dynamic.yml - Enhanced dynamic configuration with Cloudflare Origin Certificates
 http:
     routers:
-        # CMNW.ME Domain Routes
-        # cmnw-next (Frontend)
-        cmnw-next:
-            rule: "Host(`cmnw.me`)"
-            entryPoints:
-                - websecure
-            service: cmnw-next
-            middlewares:
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
-        # cmnw-api (Backend API)
-        cmnw-api:
-            rule: "Host(`api.cmnw.me`)"
-            entryPoints:
-                - websecure
-            service: cmnw-api
-            middlewares:
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
-        # Grafana on cmnw.me
-        grafana-me:
-            rule: "Host(`grafana.cmnw.me`)"
-            entryPoints:
-                - websecure
-            service: grafana
-            middlewares:
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
-        # Prometheus on cmnw.me
-        prometheus-me:
-            rule: "Host(`prometheus.cmnw.me`)"
-            entryPoints:
-                - websecure
-            service: prometheus
-            middlewares:
-                - traefik-auth
-                - security-headers
-            tls:
-                options: cloudflare-tls
-
-        # CMNW.RU Domain Routes
         # Traefik Dashboard Router
         traefik-dashboard:
             rule: "Host(`traefik.cmnw.ru`)"
@@ -60,8 +13,8 @@ http:
             tls:
                 options: cloudflare-tls
 
-        # Grafana on cmnw.ru
-        grafana-ru:
+        # Grafana Router
+        grafana:
             rule: "Host(`grafana.cmnw.ru`)"
             entryPoints:
                 - websecure
@@ -104,8 +57,8 @@ http:
             tls:
                 options: cloudflare-tls
 
-        # Prometheus on cmnw.ru
-        prometheus-ru:
+        # Prometheus Router (optional, for monitoring)
+        prometheus:
             rule: "Host(`prometheus.cmnw.ru`)"
             entryPoints:
                 - websecure
@@ -117,26 +70,6 @@ http:
                 options: cloudflare-tls
 
     services:
-        # CMNW Frontend Service
-        cmnw-next:
-            loadBalancer:
-                servers:
-                    - url: "http://cmnw-next:8081"
-                healthCheck:
-                    path: /
-                    interval: 30s
-                    timeout: 5s
-
-        # CMNW API Service
-        cmnw-api:
-            loadBalancer:
-                servers:
-                    - url: "http://cmnw-api:8080"
-                healthCheck:
-                    path: /api/health
-                    interval: 30s
-                    timeout: 5s
-
         # Grafana Service
         grafana:
             loadBalancer:
@@ -227,15 +160,10 @@ http:
 # TLS Configuration with Cloudflare Origin Certificates
 tls:
     certificates:
-        # Wildcard certificate for *.cmnw.me
-        - certFile: /etc/traefik/certs/cmnw.me.pem
-          keyFile: /etc/traefik/certs/cmnw.me.key
         # Wildcard certificate for *.cmnw.ru
-        - certFile: /etc/traefik/certs/cmnw.ru.pem
-          keyFile: /etc/traefik/certs/cmnw.ru.key
-        # Wildcard certificate for *.cmnw.xyz
-        - certFile: /etc/traefik/certs/cmnw.xyz.pem
-          keyFile: /etc/traefik/certs/cmnw.xyz.key
+        - certFile: /certificates/cmnw.ru.pem
+          keyFile: /certificates/cmnw.ru.key
+        # Fixed: Remove the stores section as it's not needed here
 
     options:
         cloudflare-tls:

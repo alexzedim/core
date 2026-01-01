@@ -18,8 +18,8 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - traefik-logs:/var/log/traefik
-            # Mount both configuration directory
-            - traefik-config:/etc/traefik:ro
+            # Mount configuration directory as bind mount for easier management
+            - ./traefik:/etc/traefik:ro
             # Mount your Cloudflare certificates
             - traefik-certificates:/certificates
         networks:
