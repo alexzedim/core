@@ -3,6 +3,10 @@
 .env
 .env.docker
 
+# Traefik certificates (keep private)
+/traefik/certs/*
+!/traefik/certs/.gitkeep
+
 # Docker data
 /volumes
 
