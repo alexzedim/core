@@ -20,8 +20,6 @@ services:
             - traefik-logs:/var/log/traefik
             # Mount configuration directory as bind mount for easier management
             - ./traefik:/etc/traefik:ro
-            # Mount your Cloudflare certificates
-            - traefik-certificates:/certificates
         networks:
             - traefik
         healthcheck:
@@ -32,11 +30,7 @@ services:
             start_period: 10s
 
 volumes:
-    traefik-certificates:
-        driver: local
     traefik-logs:
-        driver: local
-    traefik-config:
         driver: local
 
 networks:
