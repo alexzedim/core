@@ -13,7 +13,7 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - nginx-logs:/var/log/nginx
-            - nginx:/etc/nginx:ro
+            - nginx:/etc/nginx
         networks:
             - cmnw
         healthcheck:
@@ -34,7 +34,7 @@ services:
             - NGINX_CONF_DIR=/etc/nginx
             - NGINX_LOG_DIR=/var/log/nginx
         volumes:
-            - ./nginx:/etc/nginx
+            - nginx:/etc/nginx
             - nginx-logs:/var/log/nginx
             - nginx-ui-data:/home/nginx-ui
         networks:
@@ -69,11 +69,11 @@ services:
             start_period: 40s
 
 volumes:
+    nginx:
+        driver: local
     nginx-logs:
         driver: local
     nginx-ui-data:
-        driver: local
-    nginx:
         driver: local
 
 networks:
