@@ -37,6 +37,8 @@ services:
             - nginx:/etc/nginx
             - nginx-logs:/var/log/nginx
             - nginx-ui-data:/home/nginx-ui
+            - nginx-ui-config:/etc/nginx-ui
+            - nginx-ui-db:/var/lib/nginx-ui
         networks:
             - cmnw
         depends_on:
@@ -74,6 +76,10 @@ volumes:
     nginx-logs:
         driver: local
     nginx-ui-data:
+        driver: local
+    nginx-ui-config:
+        driver: local
+    nginx-ui-db:
         driver: local
 
 networks:
