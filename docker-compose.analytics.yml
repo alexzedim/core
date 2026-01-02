@@ -41,7 +41,7 @@ services:
       - '--web.enable-lifecycle'
     networks:
       - loki
-      - traefik
+      - cmnw
 
   postgres_exporter:
     container_name: postgres_exporter
@@ -80,7 +80,7 @@ services:
       - grafana:/var/lib/grafana
     networks:
       - loki
-      - traefik
+      - cmnw
 
   mcp-grafana:
     container_name: mcp-grafana
@@ -101,7 +101,7 @@ services:
 networks:
   loki:
     driver: bridge
-  traefik:
+  cmnw:
     external: true
 
 volumes:
@@ -144,11 +144,13 @@ configs:
           static_configs:
             - targets: ['128.0.0.255:9000']
   
-        - job_name: 'traefik'
+        - job_name: 'nginx'
           static_configs:
-            - targets: ['128.0.0.255:8082']
+            - targets: ['128.0.0.255:9113']
+          scrape_interval: 15s
+          metrics_path: /metrics
 
-        - job_name: 'home-assistant'
+        - job_name: 'hom@e-assistant'
           metrics_path: /api/prometheus
           scheme: http
           static_configs:
