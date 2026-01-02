@@ -150,7 +150,7 @@ configs:
           scrape_interval: 15s
           metrics_path: /metrics
 
-        - job_name: 'hom@e-assistant'
+        - job_name: 'home-assistant'
           metrics_path: /api/prometheus
           scheme: http
           static_configs:
