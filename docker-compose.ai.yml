@@ -19,7 +19,7 @@ services:
       - mcp-github-data:/data
     restart: always
     networks:
-      - ai
+      - cmnw
 
   mcp-grafana:
     container_name: mcp-grafana
@@ -32,7 +32,7 @@ services:
       - "8001:8001"
     command: ["--transport", "sse", "--address", "0.0.0.0:8001"]
     networks:
-      - ai
+      - cmnw
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -47,10 +47,9 @@ services:
       QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED:-false}
       QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL:-info}
     volumes:
-      - qdrant_data:/qdrant/storage
+      - qdrant:/qdrant/storage
       - ./qdrant/qdrant-config.yaml:/qdrant/config/production.yaml:ro
     networks:
-      - ai
       - cmnw
     security_opt:
       - no-new-privileges:true
@@ -67,23 +66,12 @@ volumes:
   mcp-github-data:
     driver: local
 
-  qdrant_data:
+  qdrant:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${QDRANT_DATA_PATH:-/opt/qdrant-data}
 
 # ============================================================================
 # Networks
 # ============================================================================
 networks:
-  ai:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
-          gateway: 172.25.0.1
-
   cmnw:
     external: true

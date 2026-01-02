@@ -14,7 +14,7 @@ Successfully migrated all MCP (Model Context Protocol) servers and implemented p
   - `github-mcp-server`: GitHub integration for AI models
   - `mcp-grafana`: Grafana dashboard integration
   - `qdrant`: Production-ready vector database
-- **Networks**: Internal `ai` network + external `cmnw` network
+- **Networks**: External `cmnw` network (shared with monitoring and reverse proxy)
 - **Volumes**: Persistent storage for all services
 
 #### `qdrant/qdrant-config.yaml`
@@ -97,9 +97,8 @@ Successfully migrated all MCP (Model Context Protocol) servers and implemented p
 │  │  Storage: /opt/qdrant-data                           │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                               │
-│  Networks:                                                    │
-│  - ai (internal): 172.25.0.0/16                             │
-│  - cmnw (external): for monitoring & reverse proxy          │
+│  Network: cmnw (external)                                    │
+│  - Shared with Prometheus, Nginx, and other services        │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
          │                          │
@@ -252,9 +251,9 @@ If issues occur:
    - Read-only key for monitoring/metrics
 
 2. **Network Security**
-   - Internal `ai` network for service-to-service communication
-   - External `cmnw` network for monitoring integration
-   - Nginx reverse proxy with SSL/TLS
+    - External `cmnw` network for all service communication
+    - Shared with Prometheus, Nginx, and other infrastructure services
+    - Nginx reverse proxy with SSL/TLS
 
 3. **Access Control**
    - Basic authentication on Nginx reverse proxy
