@@ -121,7 +121,7 @@ http:
         cmnw-next:
             loadBalancer:
                 servers:
-                    - url: "http://cmnw-next:8081"
+                    - url: "http://128.0.0.255:8081"
                 healthCheck:
                     path: /
                     interval: 30s
@@ -131,13 +131,13 @@ http:
         cmnw-api:
             loadBalancer:
                 servers:
-                    - url: "http://cmnw-api:8080"
+                    - url: "http://128.0.0.255:8080"
 
         # Grafana Service
         grafana:
             loadBalancer:
                 servers:
-                    - url: "http://grafana:3000"
+                    - url: "http://128.0.0.255:3000"
                 healthCheck:
                     path: /api/health
                     interval: 30s
@@ -147,7 +147,7 @@ http:
         portainer:
             loadBalancer:
                 servers:
-                    - url: "http://portainer:9000"
+                    - url: "http://128.0.0.255:9000"
                 healthCheck:
                     path: /api/system/status
                     interval: 30s
@@ -156,7 +156,7 @@ http:
         minio-api:
             loadBalancer:
                 servers:
-                    - url: "http://minio:9000"
+                    - url: "http://128.0.0.255:9000"
                 healthCheck:
                     path: /minio/health/live
                     interval: 30s
@@ -165,13 +165,13 @@ http:
         minio-console:
             loadBalancer:
                 servers:
-                    - url: "http://minio:9001"
+                    - url: "http://128.0.0.255:9001"
 
         # Prometheus Service
         prometheus:
             loadBalancer:
                 servers:
-                    - url: "http://prometheus:9090"
+                    - url: "http://128.0.0.255:9090"
                 healthCheck:
                     path: /-/healthy
                     interval: 30s
