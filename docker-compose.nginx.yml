@@ -17,8 +17,6 @@ services:
             - letsencrypt:/etc/letsencrypt
         networks:
             - cmnw
-        depends_on:
-            - certbot
 
     certbot:
         image: certbot/certbot:latest
@@ -32,8 +30,6 @@ services:
         networks:
             - cmnw
         entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
-        depends_on:
-            - nginx
 
     nginx-ui:
         image: 'uozi/nginx-ui:latest'
