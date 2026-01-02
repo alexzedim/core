@@ -48,7 +48,7 @@ services:
       QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL:-info}
     volumes:
       - qdrant:/qdrant/storage
-      - ./qdrant/qdrant-config.yaml:/qdrant/config/production.yaml:ro
+      - ./qdrant/config:/qdrant/config:ro
     networks:
       - cmnw
     security_opt:
