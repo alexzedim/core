@@ -70,14 +70,8 @@ cluster:
 # Logging configuration
 log_level: info
 
-# API key configuration
-api_key: ${QDRANT_API_KEY}
-
-# Read-only API key for metrics
-read_only_api_key: ${QDRANT_READ_ONLY_API_KEY}
-
 # Telemetry configuration
-telemetry_disabled: ${QDRANT_TELEMETRY_DISABLED:-false}
+telemetry_disabled: false
 
 # Consensus configuration (for cluster mode)
 consensus:
