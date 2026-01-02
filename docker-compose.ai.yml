@@ -1,0 +1,89 @@
+name: 'ai'
+version: '3.8'
+
+# ============================================================================
+# MCP Servers & Qdrant Vector Database Services
+# ============================================================================
+
+
+services:
+  github-mcp-server:
+    image: ghcr.io/github/github-mcp-server
+    container_name: github-mcp-server
+    environment:
+      MCP_SERVER_NAME: github
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
+    ports:
+      - "3001:3000"
+    volumes:
+      - mcp-github-data:/data
+    restart: always
+    networks:
+      - ai
+
+  mcp-grafana:
+    container_name: mcp-grafana
+    image: mcp/grafana:latest
+    restart: always
+    environment:
+      GRAFANA_URL: ${GRAFANA_URL}
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
+    ports:
+      - "8001:8001"
+    command: ["--transport", "sse", "--address", "0.0.0.0:8001"]
+    networks:
+      - ai
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "6333:6333"      # REST API
+      - "6334:6334"      # gRPC API
+    environment:
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-qdrant-api-key-change-me}
+      QDRANT_READ_ONLY_API_KEY: ${QDRANT_READ_ONLY_API_KEY:-qdrant-read-only-key-change-me}
+      QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED:-false}
+      QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL:-info}
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./qdrant/qdrant-config.yaml:/qdrant/config/production.yaml:ro
+    networks:
+      - ai
+      - cmnw
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+# ============================================================================
+# Named Volumes
+# ============================================================================
+volumes:
+  mcp-github-data:
+    driver: local
+
+  qdrant_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${QDRANT_DATA_PATH:-/opt/qdrant-data}
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  ai:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
+
+  cmnw:
+    external: true
