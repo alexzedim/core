@@ -7,6 +7,13 @@
 /traefik/certs/*
 !/traefik/certs/.gitkeep
 
+# Nginx certificates and authentication (keep private)
+/nginx/certs/*
+!/nginx/certs/.gitkeep
+/nginx/.htpasswd
+/nginx/.htpasswd.bak
+/nginx/logs/*
+
 # Docker data
 /volumes
 

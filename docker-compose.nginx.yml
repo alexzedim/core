@@ -1,0 +1,80 @@
+name: "routing"
+version: '3.8'
+services:
+    nginx:
+        image: nginx:latest
+        container_name: nginx
+        restart: always
+        environment:
+            - TZ=${TZ}
+        ports:
+            - '80:80'          # HTTP
+            - '443:443'        # HTTPS
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - nginx-logs:/var/log/nginx
+            - ./nginx:/etc/nginx:ro
+            - ./nginx/certs:/etc/nginx/certs:ro
+        networks:
+            - cmnw
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+
+    nginx-ui:
+        image: 'uozi/nginx-ui:latest'
+        container_name: nginx-ui
+        restart: always
+        ports:
+            - '8090:8080'      # Nginx UI Dashboard
+        environment:
+            - TZ=${TZ}
+            - NGINX_CONF_DIR=/etc/nginx
+            - NGINX_LOG_DIR=/var/log/nginx
+        volumes:
+            - ./nginx:/etc/nginx
+            - nginx-logs:/var/log/nginx
+            - nginx-ui-data:/home/nginx-ui
+        networks:
+            - cmnw
+        depends_on:
+            - nginx
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+
+    # Nginx Exporter for Prometheus metrics
+    nginx-exporter:
+        image: 'nginx/nginx-prometheus-exporter:latest'
+        container_name: nginx-exporter
+        restart: always
+        command:
+            - -nginx.scrape-uri=http://nginx:80/nginx_status
+        ports:
+            - '9113:9113'      # Prometheus metrics
+        networks:
+            - cmnw
+        depends_on:
+            - nginx
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9113/metrics"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+
+volumes:
+    nginx-logs:
+        driver: local
+    nginx-ui-data:
+        driver: local
+
+networks:
+    cmnw:
+        external: true
