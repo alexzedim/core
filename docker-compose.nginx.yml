@@ -43,7 +43,7 @@ services:
             - '8090:8080'      # Nginx UI Dashboard
         environment:
             - TZ=${TZ}
-            - NGINX_CONF_DIR=/etc/nginx
+            - NGINX_CONF_DIR=/etc/nginx/conf.d
             - NGINX_LOG_DIR=/var/log/nginx
         volumes:
             - nginx:/etc/nginx
