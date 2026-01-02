@@ -19,15 +19,9 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - traefik-logs:/var/log/traefik
             # Mount configuration directory as bind mount for easier management
-            - ./traefik:/etc/traefik:ro
+            - traefik:/etc/traefik:ro
         networks:
             - traefik
-        healthcheck:
-            test: ["CMD", "traefik", "healthcheck", "--ping"]
-            interval: 30s
-            timeout: 3s
-            retries: 3
-            start_period: 10s
 
 volumes:
     traefik-logs:
