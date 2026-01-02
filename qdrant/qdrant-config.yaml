@@ -1,0 +1,85 @@
+# Qdrant Production Configuration
+# Based on: https://dockerhosting.ru/blog/qdrant-v-docker-polnoe-rukovodstvo-po-ustanovke-i-nastrojke-vektornoj-bazy-dannyh/
+
+# Server configuration
+server:
+  # HTTP API configuration
+  http:
+    # Bind address for HTTP API
+    uri: 0.0.0.0:6333
+    # Maximum payload size in bytes (100MB)
+    max_payload_size_mb: 100
+    # Enable CORS
+    cors:
+      allow_credentials: true
+      allowed_origins:
+        - "*"
+      allowed_methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed_headers:
+        - "*"
+      max_age: 3600
+
+  # gRPC API configuration
+  grpc:
+    # Bind address for gRPC API
+    uri: 0.0.0.0:6334
+    # Maximum message size in bytes (100MB)
+    max_message_size_mb: 100
+
+# Storage configuration
+storage:
+  # Storage path
+  storage_path: ./storage
+
+  # Write-ahead log configuration
+  wal:
+    # WAL directory
+    wal_path: ./storage/wal
+    # WAL capacity in bytes (1GB)
+    wal_capacity_mb: 1024
+    # Flush interval in seconds
+    wal_segments_ahead: 0
+
+  # Performance tuning
+  performance:
+    # Max number of threads for background operations
+    max_optimization_threads: 4
+    # Enable mmap for large collections
+    default_vector_size: 1536
+    # Hnsw configuration
+    hnsw_config:
+      # Maximum number of connections per node
+      m: 16
+      # Size of the dynamic list
+      ef_construct: 200
+      # Size of the dynamic list for search
+      ef: 200
+      # Seed for random number generator
+      seed: 0
+
+# Cluster configuration (optional, for distributed setup)
+cluster:
+  # Disable cluster mode for single-node setup
+  enabled: false
+
+# Logging configuration
+log_level: info
+
+# API key configuration
+api_key: ${QDRANT_API_KEY}
+
+# Read-only API key for metrics
+read_only_api_key: ${QDRANT_READ_ONLY_API_KEY}
+
+# Telemetry configuration
+telemetry_disabled: ${QDRANT_TELEMETRY_DISABLED:-false}
+
+# Consensus configuration (for cluster mode)
+consensus:
+  # Tick period in milliseconds
+  tick_period_ms: 100

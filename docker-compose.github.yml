@@ -143,26 +143,10 @@ services:
         networks:
             - runner-network
 
-    github-mcp-server:
-        image: ghcr.io/github/github-mcp-server
-        container_name: github-mcp-server
-        environment:
-            MCP_SERVER_NAME: github
-            GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
-        ports:
-            - "3001:3000"
-        volumes:
-            - mcp-github-data:/data
-        restart: always
-        networks:
-            - runner-network
-
 volumes:
     cmnw-runner-work:
         driver: local
     oraculum-runner-work:
-        driver: local
-    mcp-github-data:
         driver: local
 
 networks:
