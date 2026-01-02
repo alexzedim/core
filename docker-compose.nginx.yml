@@ -13,8 +13,8 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - nginx-logs:/var/log/nginx
-            - ./nginx:/etc/nginx:ro
-            - ./nginx/certs:/etc/nginx/certs:ro
+            - nginx:/etc/nginx:ro
+            - nginx/certs:/etc/nginx/certs:ro
         networks:
             - cmnw
         healthcheck:
@@ -73,6 +73,8 @@ volumes:
     nginx-logs:
         driver: local
     nginx-ui-data:
+        driver: local
+    nginx:
         driver: local
 
 networks:
