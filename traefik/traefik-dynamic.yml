@@ -132,10 +132,6 @@ http:
             loadBalancer:
                 servers:
                     - url: "http://cmnw-api:8080"
-                healthCheck:
-                    path: /
-                    interval: 30s
-                    timeout: 5s
 
         # Grafana Service
         grafana:
