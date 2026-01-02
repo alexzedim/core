@@ -24,6 +24,8 @@ services:
             - traefik
 
 volumes:
+    traefik:
+        driver: local
     traefik-logs:
         driver: local
 
