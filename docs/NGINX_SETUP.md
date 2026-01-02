@@ -65,7 +65,7 @@ Nginx Reverse Proxy (Port 80/443)
 ## Configuration Files
 
 ### Docker Compose
-**File**: [`docker-compose.nginx.yml`](docker-compose.nginx.yml)
+**File**: [`docker-compose.nginx.yml`](../docker-compose.nginx.yml)
 
 Defines three services:
 - Nginx reverse proxy
@@ -73,7 +73,7 @@ Defines three services:
 - Nginx Prometheus exporter
 
 ### Nginx Configuration
-**File**: [`nginx/nginx.conf`](nginx/nginx.conf)
+**File**: [`nginx/nginx.conf`](../nginx/nginx.conf)
 
 Main configuration with:
 - Worker optimization
@@ -83,7 +83,7 @@ Main configuration with:
 - Health check endpoint
 
 ### Virtual Hosts
-**File**: [`nginx/conf.d/default.conf`](nginx/conf.d/default.conf)
+**File**: [`nginx/conf.d/default.conf`](../nginx/conf.d/default.conf)
 
 Complete routing for all domains with:
 - TLS 1.2/1.3 support
@@ -297,7 +297,7 @@ Logs are stored in `nginx-logs` volume. Configure log rotation as needed.
 
 For detailed information, see:
 - [`README_NGINX.md`](README_NGINX.md) - Comprehensive guide
-- [`nginx/DASHBOARD_SETUP.md`](nginx/DASHBOARD_SETUP.md) - Dashboard options
+- [`nginx/DASHBOARD_SETUP.md`](../nginx/DASHBOARD_SETUP.md) - Dashboard options
 
 ## Status
 

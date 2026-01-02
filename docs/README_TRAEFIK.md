@@ -11,12 +11,12 @@ This directory contains a production-ready Traefik v3.4 reverse proxy configurat
 Start here based on your needs:
 
 ### For Setup & Deployment
-1. **[CERTIFICATE_SETUP.md](./CERTIFICATE_SETUP.md)** - How to obtain and install Cloudflare Origin Certificates
-2. **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - Step-by-step deployment and verification guide
+1. **[CERTIFICATE_SETUP.md](CERTIFICATE_SETUP.md)** - How to obtain and install Cloudflare Origin Certificates
+2. **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Step-by-step deployment and verification guide
 
 ### For Understanding
-3. **[CLOUDFLARE_FULL_STRICT_EXPLAINED.md](./CLOUDFLARE_FULL_STRICT_EXPLAINED.md)** - Why your setup requires origin certificates
-4. **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Complete overview of what was implemented
+3. **[CLOUDFLARE_FULL_STRICT_EXPLAINED.md](CLOUDFLARE_FULL_STRICT_EXPLAINED.md)** - Why your setup requires origin certificates
+4. **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Complete overview of what was implemented
 
 ## 🎯 What This Setup Does
 
