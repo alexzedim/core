@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cmnw-nginx
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+    ports:
+      - "80:80"
+      - "443:443"
+    expose:
+      - "8080"
+    volumes:
+      - nginx-config:/etc/nginx:ro
+      - nginx-logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - edge
+      - cmnw
+
+  nginx-ui:
+    image: uozi/nginx-ui:latest
+    container_name: cmnw-nginx-ui
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+    ports:
+      - "9080:80"
+    volumes:
+      - nginx-config:/etc/nginx
+      - nginx-ui-state:/etc/nginx-ui
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - nginx
+    networks:
+      - edge
+
+  nginx-metrics:
+    image: nginx/nginx-prometheus-exporter:1.4.0
+    container_name: cmnw-nginx-metrics
+    restart: unless-stopped
+    command:
+      - -nginx.scrape-uri=http://cmnw-nginx:8080/stub_status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    networks:
+      - edge
+
+networks:
+  edge:
+    name: cmnw_edge
+    driver: bridge
+  cmnw:
+    external: true
+
+volumes:
+  nginx-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./nginx
+  nginx-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./nginx/logs
+  nginx-ui-state:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./nginx-ui
