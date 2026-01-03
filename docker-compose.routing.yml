@@ -26,7 +26,7 @@ services:
     environment:
       - TZ=Europe/Moscow
     ports:
-      - "9080:80"
+      - "9080:9000"
     volumes:
       - nginx-config:/etc/nginx
       - nginx-ui-state:/etc/nginx-ui
