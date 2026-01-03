@@ -35,6 +35,7 @@ services:
       - nginx
     networks:
       - edge
+      - cmnw
 
   nginx-metrics:
     image: nginx/nginx-prometheus-exporter:1.4.0
