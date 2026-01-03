@@ -68,6 +68,10 @@ volumes:
 
   qdrant:
     driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/qdrant'
 
 # ============================================================================
 # Networks
