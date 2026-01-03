@@ -65,7 +65,7 @@ Nginx Reverse Proxy (Port 80/443)
 ## Configuration Files
 
 ### Docker Compose
-**File**: [`docker-compose.nginx.yml`](../docker-compose.nginx.yml)
+**File**: [`docker-compose.nginx.yml`](../docker-compose.routing.yml)
 
 Defines three services:
 - Nginx reverse proxy

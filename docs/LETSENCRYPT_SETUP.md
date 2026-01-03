@@ -71,7 +71,7 @@ You should see a valid Let's Encrypt certificate.
 
 ### Docker Services
 
-The setup includes two new services in [`docker-compose.nginx.yml`](../docker-compose.nginx.yml):
+The setup includes two new services in [`docker-compose.nginx.yml`](../docker-compose.routing.yml):
 
 1. **certbot**: Automatically renews certificates
    - Runs continuously
@@ -281,7 +281,7 @@ EMAIL="admin@cmnw.ru"
 
 ### Adjust Renewal Check Interval
 
-Edit the certbot service in [`docker-compose.nginx.yml`](../docker-compose.nginx.yml):
+Edit the certbot service in [`docker-compose.nginx.yml`](../docker-compose.routing.yml):
 
 ```yaml
 entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 24h & wait $${!}; done"

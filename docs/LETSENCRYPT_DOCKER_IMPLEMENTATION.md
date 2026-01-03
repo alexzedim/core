@@ -42,7 +42,7 @@ ssl_certificate_key /etc/letsencrypt/live/cmnw.ru/privkey.pem;
 
 ### 2. Docker Compose Updates
 
-#### [`docker-compose.nginx.yml`](../docker-compose.nginx.yml)
+#### [`docker-compose.nginx.yml`](../docker-compose.routing.yml)
 
 **Added certbot service:**
 ```yaml
@@ -233,7 +233,7 @@ If migrating from Cloudflare Origin Certificates:
 ### Modified Files
 - [`nginx/nginx.conf`](../nginx/nginx.conf) - Added ACME challenge location
 - [`nginx/conf.d/default.conf`](../nginx/conf.d/default.conf) - Updated certificate paths for cmnw.ru domains
-- [`docker-compose.nginx.yml`](../docker-compose.nginx.yml) - Added certbot service and letsencrypt volume
+- [`docker-compose.nginx.yml`](../docker-compose.routing.yml) - Added certbot service and letsencrypt volume
 
 ### New Files
 - [`nginx/init-letsencrypt.sh`](../nginx/init-letsencrypt.sh) - Initialization script
