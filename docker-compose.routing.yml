@@ -68,16 +68,16 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ./nginx
+      device: '/mnt/nginx'
   nginx-logs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./nginx/logs
+      device: '/mnt/nginx/logs'
   nginx-ui-state:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./nginx-ui
+      device: '/mnt/nginx-ui'
