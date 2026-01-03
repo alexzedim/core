@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Moscow
+      - NGINX_UI_IGNORE_DOCKER_SOCKET=true
     ports:
       - "80:80"
       - "443:443"
