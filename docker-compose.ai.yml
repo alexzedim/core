@@ -70,6 +70,24 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: always
+    ports:
+      - "3000:8080"      # Web UI
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_AUTH: ${WEBUI_AUTH}
+    volumes:
+      - open-webui:/app/backend/data
+    networks:
+      - cmnw
+    depends_on:
+      - ollama
+    security_opt:
+      - no-new-privileges:true
+
 # ============================================================================
 # Named Volumes
 # ============================================================================
