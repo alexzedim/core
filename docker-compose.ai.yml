@@ -95,6 +95,9 @@ volumes:
   mcp-github-data:
     driver: local
 
+  open-webui:
+    driver: local
+
   qdrant:
     driver: local
     driver_opts:
