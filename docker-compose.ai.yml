@@ -5,7 +5,6 @@ version: '3.8'
 # MCP Servers & Qdrant Vector Database Services
 # ============================================================================
 
-
 services:
   github-mcp-server:
     image: ghcr.io/github/github-mcp-server
@@ -42,10 +41,10 @@ services:
       - "6333:6333"      # REST API
       - "6334:6334"      # gRPC API
     environment:
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-qdrant-api-key-change-me}
-      QDRANT_READ_ONLY_API_KEY: ${QDRANT_READ_ONLY_API_KEY:-qdrant-read-only-key-change-me}
-      QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED:-false}
-      QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL:-info}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      QDRANT_READ_ONLY_API_KEY: ${QDRANT_READ_ONLY_API_KEY}
+      QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED}
+      QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL}
     volumes:
       - qdrant:/qdrant/storage
       - ./qdrant/config:/qdrant/config:ro
@@ -53,11 +52,24 @@ services:
       - cmnw
     security_opt:
       - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: "100m"
-        max-file: "10"
+
+  # ============================================================================
+  # Ollama - Embedding Service with mxbai-embed-large
+  # ============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: always
+    ports:
+      - "11434:11434"    # Ollama API endpoint
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST}
+    volumes:
+      - ollama:/root/.ollama
+    networks:
+      - cmnw
+    security_opt:
+      - no-new-privileges:true
 
 # ============================================================================
 # Named Volumes
@@ -72,6 +84,13 @@ volumes:
       type: 'none'
       o: 'bind'
       device: '/mnt/qdrant'
+
+  ollama:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/ollama'
 
 # ============================================================================
 # Networks
