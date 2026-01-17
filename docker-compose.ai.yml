@@ -46,8 +46,7 @@ services:
       QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED}
       QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL}
     volumes:
-      - qdrant:/qdrant/storage
-      - ./qdrant/config:/qdrant/config:ro
+      - qdrant:/qdrant
     networks:
       - cmnw
     security_opt:
