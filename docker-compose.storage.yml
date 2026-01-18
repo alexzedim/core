@@ -58,7 +58,7 @@ services:
       - storage-network
 
   rabbitmq:
-    image: rabbitmq:3.11.11-management-alpine
+    image: rabbitmq:4.2.2-management-alpine
     hostname: rabbitmq
     container_name: rabbitmq
     restart: always
