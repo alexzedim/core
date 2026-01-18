@@ -57,6 +57,23 @@ services:
     networks:
       - storage-network
 
+  rabbitmq:
+    image: rabbitmq:3.11.11-management-alpine
+    hostname: rabbitmq
+    container_name: rabbitmq
+    restart: always
+    networks:
+      - storage-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,error}] disk_free_limit 2147483648
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
 networks:
   storage-network:
     driver: bridge
@@ -70,6 +87,12 @@ volumes:
       type: 'none'
       o: 'bind'
       device: '/mnt/postgres'
+  rabbitmq:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/rabbitmq'
   redis:
   bull-mq:
   minio-s3:

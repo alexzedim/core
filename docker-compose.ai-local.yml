@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-local
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - ai-local-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama-web-ui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: ollama-web-ui-local
+    ports:
+      - "8080:8080"
+    volumes:
+      - ollama_webui_data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    networks:
+      - ai-local-network
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
+  ollama_webui_data:
+
+networks:
+  ai-local-network:
+    driver: bridge
