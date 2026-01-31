@@ -1,0 +1,49 @@
+# GitLab Configuration - .gitignore
+#
+# This file prevents sensitive GitLab configuration files from being
+# committed to version control.
+
+#-------------------------------------------------------------------------------
+# Secrets and Sensitive Configuration
+#-------------------------------------------------------------------------------
+# GitLab secrets file containing encryption keys and passwords
+gitlab-secrets.json
+
+# Any backup secrets files
+gitlab-secrets.json.backup
+gitlab-secrets.json.*
+
+#-------------------------------------------------------------------------------
+# Data Directories
+#-------------------------------------------------------------------------------
+# Application data (may contain sensitive information)
+data/
+
+# Application logs (may contain sensitive information)
+logs/
+
+#-------------------------------------------------------------------------------
+# Temporary and Generated Files
+#-------------------------------------------------------------------------------
+# Temporary configuration files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+#-------------------------------------------------------------------------------
+# Backup Files
+#-------------------------------------------------------------------------------
+# Database backups
+backups/
+*.sql
+*.dump
+
+# Configuration backups
+config/gitlab.rb.backup
+config/gitlab.rb.*
