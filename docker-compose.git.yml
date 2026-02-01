@@ -1,6 +1,37 @@
 name: 'git'
 version: '3.8'
 services:
+    # GitLab Self-Hosted
+    gitlab:
+        image: gitlab/gitlab-ce:latest
+        container_name: gitlab
+        hostname: gitlab.localhost
+        restart: always
+        ports:
+            - '80:80'
+            - '443:443'
+            - '2222:22'
+        volumes:
+            - ./gitlab/config/gitlab.rb:/etc/gitlab/gitlab.rb:ro
+            - ./gitlab/config/gitlab-secrets.json:/etc/gitlab/gitlab-secrets.json:ro
+            - ./gitlab/logs:/var/log/gitlab
+            - gitlab:/var/opt/gitlab
+        networks:
+            - runner-network
+            - storage-network
+        shm_size: '256m'
+        depends_on:
+            - postgres
+            - redis
+        deploy:
+            resources:
+                limits:
+                    cpus: '4.0'
+                    memory: 8G
+                reservations:
+                    cpus: '2.0'
+                    memory: 4G
+
     cmnw-github-runner-I:
         image: myoung34/github-runner:latest
         container_name: cmnw-github-runner-I
@@ -143,37 +174,6 @@ services:
         networks:
             - runner-network
 
-    # GitLab Self-Hosted
-    gitlab:
-        image: gitlab/gitlab-ce:latest
-        container_name: gitlab
-        hostname: gitlab.localhost
-        restart: always
-        ports:
-            - '80:80'
-            - '443:443'
-            - '2222:22'
-        volumes:
-            - ./gitlab/config/gitlab.rb:/etc/gitlab/gitlab.rb:ro
-            - ./gitlab/config/gitlab-secrets.json:/etc/gitlab/gitlab-secrets.json:ro
-            - ./gitlab/logs:/var/log/gitlab
-            - gitlab:/var/opt/gitlab
-        networks:
-            - runner-network
-            - storage-network
-        shm_size: '256m'
-        depends_on:
-            - postgres
-            - redis
-        deploy:
-            resources:
-                limits:
-                    cpus: '4.0'
-                    memory: 8G
-                reservations:
-                    cpus: '2.0'
-                    memory: 4G
-
 volumes:
     cmnw-runner-work:
         driver: local
@@ -181,10 +181,6 @@ volumes:
         driver: local
     gitlab:
         driver: local
-        driver_opts:
-            type: 'none'
-            o: 'bind'
-            device: '/mnt/gitlab'
 
 networks:
     runner-network:
