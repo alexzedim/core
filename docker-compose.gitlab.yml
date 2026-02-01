@@ -1,0 +1,112 @@
+# ============================================================================
+# GitLab CE Docker Compose Configuration
+# ============================================================================
+# 
+# Production-ready, self-contained GitLab deployment optimized for:
+#   - Intel Xeon E5-2680v4 (28 cores/56 threads)
+#   - 32GB RAM
+#   - RAID 10 SSD NVMe storage
+#   - Network: 128.0.0.255
+#
+# Resource Allocation Strategy:
+#   - CPU: 8 cores max (28% of available, leaving headroom for system)
+#   - RAM: 16GB max (50% of available, appropriate for GitLab workloads)
+#   - SHM: 2GB (increased for better Git operations and caching)
+#
+# Usage:
+#   docker-compose -f docker-compose.gitlab.yml up -d    # Start GitLab
+#   docker-compose -f docker-compose.gitlab.yml down     # Stop GitLab
+#   docker-compose -f docker-compose.gitlab.yml logs -f  # View logs
+# ============================================================================
+
+name: 'gitlab'
+version: '3.8'
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: gitlab.localhost
+    restart: always
+    
+    # Port Mappings
+    # 8083:80   - HTTP web interface
+    # 8443:443  - HTTPS web interface  
+    # 2222:22   - SSH for Git operations
+    ports:
+      - "8083:80"
+      - "8443:443"
+      - "2222:22"
+    
+    # Resource Limits - Optimized for Xeon E5-2680v4 with 32GB RAM
+    # CPU: 8 cores max (allows concurrent Git operations, CI/CD jobs)
+    # CPU: 4 cores min (guaranteed baseline for responsive operations)
+    # RAM: 16GB max (supports large repos, multiple users, CI/CD)
+    # RAM: 8GB min (guaranteed baseline for stable operations)
+    # SHM: 2GB (shared memory for PostgreSQL, Redis, Git operations)
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '4.0'
+          memory: 8G
+    
+    shm_size: 2g
+    
+    # Volume Mappings - Relative paths from project root
+    # All data persists in gitlab/* directories
+    volumes:
+      - ./gitlab/config:/etc/gitlab      # GitLab configuration files
+      - ./gitlab/logs:/var/log/gitlab    # Application and system logs
+      - ./gitlab/data:/var/opt/gitlab    # Git repositories, database, uploads
+    
+    # Environment Configuration
+    environment:
+      # GitLab Omnibus Configuration
+      # Configure external URL, nginx settings, and proxy headers
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://128.0.0.255'
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = true
+        nginx['proxy_set_headers'] = {
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Port" => "443",
+          "X-Forwarded-Host" => "128.0.0.255"
+        }
+      
+      # Default root password (change after first login)
+      GITLAB_ROOT_PASSWORD: admin123
+    
+    # Health Check Configuration
+    # Ensures GitLab is fully operational before marking as healthy
+    # Checks the /-/health endpoint which validates all core services
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/-/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # GitLab takes time to fully initialize
+    
+    # Logging Configuration
+    # json-file driver with rotation to prevent disk space issues
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"      # Maximum size of each log file
+        max-file: "3"        # Keep 3 rotated log files (30MB total)
+        compress: "true"     # Compress rotated logs
+    
+    # Network Configuration
+    networks:
+      - gitlab-network
+
+# Network Definitions
+# Internal bridge network for GitLab and potential future services
+# (e.g., GitLab Runner, Redis cache, monitoring)
+networks:
+  gitlab-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-gitlab
