@@ -51,3 +51,7 @@ services:
         }
     networks:
       - cmnw
+
+networks:
+  cmnw:
+    external: true
