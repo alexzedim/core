@@ -8,8 +8,8 @@ services:
         hostname: gitlab.localhost
         restart: always
         ports:
-            - '80:80'
-            - '443:443'
+            - '8180:80'
+            - '8443:443'
             - '2222:22'
         volumes:
             - ./gitlab/config/gitlab.rb:/etc/gitlab/gitlab.rb:ro
@@ -184,3 +184,4 @@ networks:
         driver: bridge
     storage-network:
         driver: bridge
+
