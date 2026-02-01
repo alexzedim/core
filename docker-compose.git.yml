@@ -12,9 +12,9 @@ services:
             - '8443:443'
             - '2222:22'
         volumes:
-            - ./gitlab/config/gitlab.rb:/etc/gitlab/gitlab.rb:ro
-            - ./gitlab/config/gitlab-secrets.json:/etc/gitlab/gitlab-secrets.json:ro
-            - ./gitlab/logs:/var/log/gitlab
+            - gitlab:/etc/gitlab/gitlab.rb:ro
+            - gitlab:/etc/gitlab/gitlab-secrets.json:ro
+            - gitlab:/var/log/gitlab
             - gitlab:/var/opt/gitlab
         networks:
             - runner-network
