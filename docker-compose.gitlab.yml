@@ -99,5 +99,4 @@ services:
     
     # Network Configuration
     networks:
-      - gitlab-network
       - cmnw
