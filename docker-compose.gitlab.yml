@@ -67,13 +67,12 @@ services:
       # GitLab Omnibus Configuration
       # Configure external URL, nginx settings, and proxy headers
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://128.0.0.255'
+        external_url 'https://gitlab.cmnw.xyz'
         nginx['listen_port'] = 80
         nginx['listen_https'] = false
         nginx['proxy_set_headers'] = {
-          "X-Forwarded-Proto" => "http",
-          "X-Forwarded-Port" => "8083",
-          "X-Forwarded-Host" => "128.0.0.255"
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on"
         }
       
       # Default root password (change after first login)
@@ -101,6 +100,7 @@ services:
     # Network Configuration
     networks:
       - gitlab-network
+      - cmnw
 
 # Network Definitions
 # Internal bridge network for GitLab and potential future services
@@ -110,3 +110,7 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-gitlab
+  
+  # External network for nginx reverse proxy
+  cmnw:
+    external: true
