@@ -26,7 +26,6 @@ services:
   gitlab:
     image: gitlab/gitlab-ce:latest
     container_name: gitlab
-    hostname: gitlab.localhost
     restart: always
     ports:
       - "8083:80"
