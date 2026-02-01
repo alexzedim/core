@@ -43,7 +43,6 @@ services:
       - minio-s3:/bitnami/minio/data
     networks:
       - storage-network
-      - traefik
 
   bull-mq:
     image: redis:7.4.3-alpine
@@ -78,8 +77,6 @@ services:
 networks:
   storage-network:
     driver: bridge
-  traefik:
-    external: true
 
 volumes:
   postgres:
