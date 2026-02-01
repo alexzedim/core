@@ -1,5 +1,4 @@
-version: "3.9"
-
+name: 'routing'
 services:
   nginx:
     image: nginx:1.27-alpine
