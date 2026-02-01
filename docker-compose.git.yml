@@ -20,9 +20,6 @@ services:
             - runner-network
             - storage-network
         shm_size: '256m'
-        depends_on:
-            - postgres
-            - redis
         deploy:
             resources:
                 limits:
