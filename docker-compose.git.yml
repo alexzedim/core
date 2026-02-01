@@ -183,4 +183,4 @@ networks:
     runner-network:
         driver: bridge
     storage-network:
-        external: true
+        driver: bridge
