@@ -33,7 +33,8 @@ services:
       - "2222:22"
     shm_size: 2g
     volumes:
-      - ./gitlab/config:/etc/gitlab      # GitLab configuration files
+      - ./gitlab/config/gitlab.rb:/etc/gitlab/gitlab.rb:ro      # GitLab configuration file (read-only)
+      - ./gitlab/config/gitlab-secrets.json:/etc/gitlab/gitlab-secrets.json:ro  # GitLab secrets file (read-only)
       - ./gitlab/logs:/var/log/gitlab    # Application and system logs
       - ./gitlab/data:/var/opt/gitlab    # Git repositories, database, uploads
     environment:
