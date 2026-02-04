@@ -1,24 +1,3 @@
-# ============================================================================
-# GitLab CE Docker Compose Configuration
-# ============================================================================
-# 
-# Production-ready, self-contained GitLab deployment optimized for:
-#   - Intel Xeon E5-2680v4 (28 cores/56 threads)
-#   - 32GB RAM
-#   - RAID 10 SSD NVMe storage
-#   - Network: 128.0.0.255
-#
-# Resource Allocation Strategy:
-#   - CPU: 8 cores max (28% of available, leaving headroom for system)
-#   - RAM: 16GB max (50% of available, appropriate for GitLab workloads)
-#   - SHM: 2GB (increased for better Git operations and caching)
-#
-# Usage:
-#   docker-compose -f docker-compose.gitlab.yml up -d    # Start GitLab
-#   docker-compose -f docker-compose.gitlab.yml down     # Stop GitLab
-#   docker-compose -f docker-compose.gitlab.yml logs -f  # View logs
-# ============================================================================
-
 name: 'gitlab'
 
 services:
