@@ -13,7 +13,7 @@ services:
     volumes:
       - git_config:/etc/gitlab
       - git_data:/var/opt/gitlab
-      - git_data:/var/log/gitlab
+      - git_logs:/var/log/gitlab
     environment:
       # Default root password (change after first login)
       GITLAB_ROOT_PASSWORD: admin123
@@ -39,3 +39,5 @@ volumes:
     name: gitlab_config
   git_data:
     name: git_data
+  git_logs:
+    name: git_logs
