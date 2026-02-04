@@ -55,3 +55,9 @@ services:
 networks:
   cmnw:
     external: true
+
+volumes:
+  gitlab_config:
+    name: gitlab_config
+  git_data:
+    name: git_data
