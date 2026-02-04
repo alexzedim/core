@@ -20,13 +20,9 @@ services:
       # GitLab Omnibus Configuration
       # Configure external URL, nginx settings, and proxy headers
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://gitlab.cmnw.xyz'
+        external_url 'http://gitlab.cmnw.xyz'
         nginx['listen_port'] = 80
         nginx['listen_https'] = false
-        nginx['proxy_set_headers'] = {
-          "X-Forwarded-Proto" => "https",
-          "X-Forwarded-Ssl" => "on"
-        }
     networks:
       - cmnw
 
