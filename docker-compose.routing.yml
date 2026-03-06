@@ -9,6 +9,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "2222:2222"  # GitLab SSH proxy
     expose:
       - "8080"
     volumes:
