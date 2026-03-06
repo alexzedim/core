@@ -11,22 +11,29 @@ services:
       - "2222:22"
     shm_size: 2g
     volumes:
-      - git_config:/etc/gitlab
+      - ./gitlab/config:/etc/gitlab
       - git_data:/var/opt/gitlab
       - git_logs:/var/log/gitlab
     environment:
-      # Default root password (change after first login)
-      GITLAB_ROOT_PASSWORD: admin123
-      # GitLab Omnibus Configuration
-      # Configure external URL, nginx settings, and proxy headers
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://gitlab.cmnw.xyz'
-        nginx['listen_port'] = 80
-        nginx['listen_https'] = false
-        nginx['proxy_set_headers'] = {
-          "X-Forwarded-Proto" => "https",
-          "X-Forwarded-Ssl" => "on"
-        }
+      GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD}
+      # SMTP Configuration
+      SMTP_ADDRESS: ${SMTP_ADDRESS}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GITLAB_EMAIL_FROM: ${GITLAB_EMAIL_FROM}
+      GITLAB_EMAIL_REPLY_TO: ${GITLAB_EMAIL_REPLY_TO}
+      # Database Configuration
+      GITLAB_DB_PASSWORD: ${GITLAB_DB_PASSWORD}
+      # Redis Configuration
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # S3/MinIO Configuration
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      # Backup S3 Configuration
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT}
     networks:
       - cmnw
 
@@ -35,8 +42,6 @@ networks:
     external: true
 
 volumes:
-  git_config:
-    name: gitlab_config
   git_data:
     name: git_data
   git_logs:
