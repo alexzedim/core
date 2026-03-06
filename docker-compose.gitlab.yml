@@ -9,11 +9,13 @@ services:
       - "8083:80"
       - "8443:443"
       - "2222:22"
+      - "5050:5050"
     shm_size: 2g
     volumes:
       - git_config:/etc/gitlab
       - git_data:/var/opt/gitlab
       - git_logs:/var/log/gitlab
+      - nginx-certs:/certs:ro  # SSL certificates from nginx volume
     environment:
       GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD}
       # SMTP Configuration
@@ -48,3 +50,9 @@ volumes:
     name: git_data
   git_logs:
     name: git_logs
+  nginx-certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: '/mnt/nginx/.certs'
