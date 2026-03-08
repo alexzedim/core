@@ -16,24 +16,6 @@ services:
       - git_logs:/var/log/gitlab
     environment:
       GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD}
-      # SMTP Configuration
-      SMTP_ADDRESS: ${SMTP_ADDRESS}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GITLAB_EMAIL_FROM: ${GITLAB_EMAIL_FROM}
-      GITLAB_EMAIL_REPLY_TO: ${GITLAB_EMAIL_REPLY_TO}
-      # Database Configuration
-      GITLAB_DB_PASSWORD: ${GITLAB_DB_PASSWORD}
-      # Redis Configuration
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      # S3/MinIO Configuration
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_ENDPOINT: ${S3_ENDPOINT}
-      # Backup S3 Configuration
-      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY}
-      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY}
-      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT}
     networks:
       - cmnw
 
