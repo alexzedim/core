@@ -8,6 +8,7 @@ services:
     ports:
       - "8083:80"
       - "8443:443"
+      - "2222:22"
     shm_size: 2g
     volumes:
       - git_config:/etc/gitlab
