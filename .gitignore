@@ -3,8 +3,9 @@
 .env
 .env.docker
 
-# Kilocode
+# Kilo
 .kilocode
+.kilo
 
 # Traefik certificates (keep private)
 /traefik/certs/*
