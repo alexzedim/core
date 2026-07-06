@@ -5,20 +5,31 @@
 # nginx when the cert actually changed. Safe to run on a schedule (crond).
 #
 # Env vars:
+#                       (default: /secrets/authorized_key.json). Used only when
 #
 # Exits 0 on success or "no change"; non-zero on failure (so crond surfaces it).
 set -eu
 
 CERT_NAME="cmnw.ru"
+DEFAULT_KEY_FILE="/secrets/authorized_key.json"
+
+# Workdir for downloaded cert + key temp files (cleaned up on exit).
+TMP_DIR="$(mktemp -d)"
+PEM_NEW="$TMP_DIR/${CERT_NAME}.pem.new"
+KEY_NEW="$TMP_DIR/${CERT_NAME}.key.new"
+
+# Resolve the key file: prefer inline env var, fall back to on-disk file.
+# Either way, scrub the key file on exit so it never persists longer than needed.
+    KEY_FILE="$(mktemp /tmp/authorized_key.XXXXXX.json)"
+    chmod 600 "$KEY_FILE"
+    trap 'rm -rf "$TMP_DIR" "$KEY_FILE"' EXIT
+else
+    trap 'rm -rf "$TMP_DIR"' EXIT
+fi
 
 CERT_DIR="/certs/.certs"
 PEM_PATH="$CERT_DIR/${CERT_NAME}.pem"
 KEY_PATH="$CERT_DIR/${CERT_NAME}.key"
-
-TMP_DIR="$(mktemp -d)"
-PEM_NEW="$TMP_DIR/${CERT_NAME}.pem.new"
-KEY_NEW="$TMP_DIR/${CERT_NAME}.key.new"
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 log() { echo "[$(date '+%Y-%m-%dT%H:%M:%S%z')] $*"; }
 
