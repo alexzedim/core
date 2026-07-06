@@ -7,6 +7,7 @@ services:
     restart: always
     networks:
       - storage-network
+      - cmnw
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -45,6 +46,7 @@ services:
       - minio-s3:/bitnami/minio/data
     networks:
       - storage-network
+      - cmnw
 
   rabbitmq:
     image: rabbitmq:4.2.2-management-alpine
@@ -53,6 +55,7 @@ services:
     restart: always
     networks:
       - storage-network
+      - cmnw
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
