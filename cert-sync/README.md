@@ -31,15 +31,19 @@ No nginx config changes are needed — `nginx/conf.d/cmnw.conf` already points t
     --subject serviceAccount:<SA_ID> \
     --role certificate-manager.certificates.downloader
 
-# Create an authorized key and save it where the container will read it
-sudo mkdir -p /mnt/cert-sync/secrets
-    --output /mnt/cert-sync/secrets/authorized_key.json
-sudo chmod 600 /mnt/cert-sync/secrets/authorized_key.json
+# Create an authorized key (save the JSON — you'll paste its contents into the
+# container environment in step 2).
+    --output authorized_key.json
 ```
 
-### 2. Set the certificate ID
+### 2. Set the environment
 
-Put the `cmnw.ru` cert ID into `../.env`:
+Two ways to provide the key — pick **one**:
+
+
+**Option B — host file (bind mount).** Place `authorized_key.json` at `/mnt/cert-sync/secrets/authorized_key.json` on the host (chmod 600) and add the bind mount `- /mnt/cert-sync/secrets:/secrets:ro` to the service's `volumes:`.
+
+Either way, also set the cert ID:
 
 ```ini
 ```
@@ -69,6 +73,5 @@ echo | openssl s_client -connect cmnw.ru:443 -servername cmnw.ru \
 ## Security notes
 
 - The service account has **only** `certificate-manager.certificates.downloader` — it can read cert contents, nothing else.
-- `authorized_key.json` lives on the host at `/mnt/cert-sync/secrets/`, bind-mounted `:ro` into the container. It is never committed (see `.gitignore`).
 - The private key is written `chmod 600`; the chain is `644`.
 - The script refuses to deploy any cert that fails to parse or is already expired.
