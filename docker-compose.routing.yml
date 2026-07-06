@@ -51,6 +51,26 @@ services:
     networks:
       - edge
 
+  # Auto-syncs the cmnw.ru cert from Yandex Cloud Certificate Manager into the
+  # nginx-config volume (-> /etc/nginx/.certs on host = /mnt/nginx/.certs) and
+  # reloads nginx when it changes. See cert-sync/README.md for host setup.
+  cert-sync:
+    build: ./cert-sync
+    image: cmnw/cert-sync:local
+    container_name: cmnw-cert-sync
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+      - YC_CERT_ID=${YC_CERT_ID}
+    volumes:
+      - nginx-config:/certs                    # shares the same volume nginx reads (writable here)
+      - /var/run/docker.sock:/var/run/docker.sock  # for `docker exec cmnw-nginx nginx -s reload`
+      - /mnt/cert-sync/secrets:/secrets:ro     # authorized_key.json lives on the host
+    networks:
+      - edge
+    depends_on:
+      - nginx
+
 networks:
   edge:
     name: cmnw_edge
