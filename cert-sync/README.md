@@ -38,16 +38,21 @@ yc resource-manager folder add-access-binding <FOLDER_ID> \
     --subject serviceAccount:<SA_ID> \
     --role certificate-manager.certificates.downloader
 
-# Create an authorized key and save it where the container will read it
-sudo mkdir -p /mnt/cert-sync/secrets
+# Create an authorized key (save the JSON — you'll paste its contents into the
+# container environment in step 2).
 yc iam key create --service-account-name cmnw-cert-sync \
-    --output /mnt/cert-sync/secrets/authorized_key.json
-sudo chmod 600 /mnt/cert-sync/secrets/authorized_key.json
+    --output authorized_key.json
 ```
 
-### 2. Set the certificate ID
+### 2. Set the environment
 
-Put the `cmnw.ru` cert ID into `../.env`:
+Two ways to provide the key — pick **one**:
+
+**Option A — env var (recommended for Portainer).** Paste the **entire contents** of `authorized_key.json` (a single-line JSON object) as the value of `YC_AUTHORIZED_KEY` in Portainer's stack env (or `.env`). No host file needed.
+
+**Option B — host file (bind mount).** Place `authorized_key.json` at `/mnt/cert-sync/secrets/authorized_key.json` on the host (chmod 600) and add the bind mount `- /mnt/cert-sync/secrets:/secrets:ro` to the service's `volumes:`.
+
+Either way, also set the cert ID:
 
 ```ini
 YC_CERT_ID=fpq65q5lufk16glvp7n4
@@ -80,6 +85,6 @@ echo | openssl s_client -connect cmnw.ru:443 -servername cmnw.ru \
 ## Security notes
 
 - The service account has **only** `certificate-manager.certificates.downloader` — it can read cert contents, nothing else.
-- `authorized_key.json` lives on the host at `/mnt/cert-sync/secrets/`, bind-mounted `:ro` into the container. It is never committed (see `.gitignore`).
+- The key is provided via `YC_AUTHORIZED_KEY` (env var) or a read-only bind mount at `/secrets/authorized_key.json`. Either way it is never committed (see `.gitignore`). When using the env var, the script writes it to a `chmod 600` temp file and scrubs it on exit.
 - The private key is written `chmod 600`; the chain is `644`.
 - The script refuses to deploy any cert that fails to parse or is already expired.

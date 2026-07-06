@@ -20,7 +20,7 @@ GitLab SSH is proxied through nginx `stream` block on port `2222` → `gitlab:22
 
 The sidecar writes into the shared `nginx-config` volume (`/certs/.certs/` inside the container = `/mnt/nginx/.certs` on the host = `/etc/nginx/.certs` in nginx), so no nginx config changes were needed. It reloads nginx via the Docker socket (`docker exec cmnw-nginx nginx -s reload`).
 
-**Host prerequisite:** `/mnt/cert-sync/secrets/authorized_key.json` must exist before `up -d` — it's the YC service-account key (role `certificate-manager.certificates.downloader`) bind-mounted `:ro`. See `cert-sync/README.md` for one-time setup. The cert ID lives in `.env` as `YC_CERT_ID`.
+**Credentials:** the YC service-account key (role `certificate-manager.certificates.downloader`) is provided via `YC_AUTHORIZED_KEY` (full `authorized_key.json` contents — set in Portainer env / `.env`), or alternatively bind-mounted at `/secrets/authorized_key.json`. The cert ID lives in `YC_CERT_ID`. See `cert-sync/README.md` for one-time setup.
 
 ### Shared External Network: `cmnw`
 
