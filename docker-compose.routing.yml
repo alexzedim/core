@@ -69,11 +69,10 @@ services:
     environment:
       - TZ=Europe/Moscow
       - YC_CERT_ID=${YC_CERT_ID}
-      # YC_AUTHORIZED_KEY is provided via Portainer env (full authorized_key.json
-      # contents). Alternatively, mount the file at /secrets/authorized_key.json.
     volumes:
       - nginx-config:/certs                    # shares the same volume nginx reads (writable here)
       - /var/run/docker.sock:/var/run/docker.sock  # for `docker exec cmnw-nginx nginx -s reload`
+      - /mnt/cert-sync/secrets:/secrets:ro     # authorized_key.json lives on the host (see cert-sync/README.md)
     networks:
       - edge
     depends_on:
