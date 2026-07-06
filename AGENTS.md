@@ -14,6 +14,12 @@ Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — each has its own SSL cert in `/etc
 
 GitLab SSH is proxied through nginx `stream` block on port `2222` → `gitlab:22`.
 
+### Certificate automation — cert-sync
+
+
+The sidecar writes into the shared `nginx-config` volume (`/certs/.certs/` inside the container = `/mnt/nginx/.certs` on the host = `/etc/nginx/.certs` in nginx), so no nginx config changes were needed. It reloads nginx via the Docker socket (`docker exec cmnw-nginx nginx -s reload`).
+
+
 ### Shared External Network: `cmnw`
 
 Multiple stacks join a pre-created external network named `cmnw` so services can reach each other across compose files. If this network doesn't exist yet, create it: `docker network create cmnw`.
@@ -49,7 +55,7 @@ Scrape targets use host IP `128.0.0.255` to reach services that run on the host 
 | File | Services | Networks |
 |------|----------|----------|
 | `docker-compose.storage.yml` | PostgreSQL 17.4, Redis 7.4.3, MinIO, RabbitMQ 4.2.2 | `storage-network` |
-| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
+| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter, cert-sync | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
 | `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum) | `runner-network` |
