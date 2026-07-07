@@ -74,13 +74,18 @@ if ! openssl x509 -in "$PEM_NEW" -noout >/dev/null 2>&1; then
   die "downloaded chain does not parse as a valid X.509 certificate"
 fi
 NOT_AFTER=$(openssl x509 -in "$PEM_NEW" -noout -enddate | cut -d= -f2)
-# Parse openssl's date format ("Aug 31 14:28:56 2026 GMT") into epoch seconds.
-# BusyBox date (Alpine) needs an explicit strptime format via -D; GNU date would
-# accept -d "<string>" directly. Handle both, and hard-fail if neither works —
-# never silently fall through to 0 (which would make every cert look "expired").
-NOT_AFTER_EPOCH=$(date -d "$NOT_AFTER" -D "%b %d %H:%M:%S %Y %Z" +%s 2>/dev/null \
-    || date -d "$NOT_AFTER" +%s 2>/dev/null \
-    || true)
+# Convert openssl's date ("Aug 31 14:28:56 2026 GMT") into "YYYY-MM-DD HH:MM:SS",
+# a format both BusyBox and GNU `date -d` parse natively. Avoids strptime format
+# quirks between the two (BusyBox %Z support is unreliable).
+# shellcheck disable=SC2086
+set -- $NOT_AFTER   # split: $1=Mon $2=Day $3=Time $4=Year $5=TZ
+case "$1" in
+    Jan) M=01;; Feb) M=02;; Mar) M=03;; Apr) M=04;;
+    May) M=05;; Jun) M=06;; Jul) M=07;; Aug) M=08;;
+    Sep) M=09;; Oct) M=10;; Nov) M=11;; Dec) M=12;;
+    *) die "cannot parse cert notAfter month: $NOT_AFTER";;
+esac
+NOT_AFTER_EPOCH=$(date -d "$4-$M-$2 $3" +%s 2>/dev/null || true)
 [ -n "$NOT_AFTER_EPOCH" ] || die "cannot parse cert notAfter date: $NOT_AFTER"
 NOW_EPOCH=$(date +%s)
 if [ "$NOT_AFTER_EPOCH" -lt "$NOW_EPOCH" ]; then
