@@ -74,7 +74,14 @@ if ! openssl x509 -in "$PEM_NEW" -noout >/dev/null 2>&1; then
   die "downloaded chain does not parse as a valid X.509 certificate"
 fi
 NOT_AFTER=$(openssl x509 -in "$PEM_NEW" -noout -enddate | cut -d= -f2)
-NOT_AFTER_EPOCH=$(date -d "$NOT_AFTER" +%s 2>/dev/null || date -j -f "%b %d %H:%M:%S %Y %Z" "$NOT_AFTER" +%s 2>/dev/null || echo 0)
+# Parse openssl's date format ("Aug 31 14:28:56 2026 GMT") into epoch seconds.
+# BusyBox date (Alpine) needs an explicit strptime format via -D; GNU date would
+# accept -d "<string>" directly. Handle both, and hard-fail if neither works —
+# never silently fall through to 0 (which would make every cert look "expired").
+NOT_AFTER_EPOCH=$(date -d "$NOT_AFTER" -D "%b %d %H:%M:%S %Y %Z" +%s 2>/dev/null \
+    || date -d "$NOT_AFTER" +%s 2>/dev/null \
+    || true)
+[ -n "$NOT_AFTER_EPOCH" ] || die "cannot parse cert notAfter date: $NOT_AFTER"
 NOW_EPOCH=$(date +%s)
 if [ "$NOT_AFTER_EPOCH" -lt "$NOW_EPOCH" ]; then
   die "downloaded certificate is already expired (notAfter=$NOT_AFTER); refusing to deploy"
