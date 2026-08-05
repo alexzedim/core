@@ -67,7 +67,11 @@ Scrape targets use host IP `128.0.0.255` to reach services that run on the host 
 | Vector storage | PostgreSQL + pgvector | `postgres` (from `storage.yml`, `POSTGRES_LIGHTRAG_DB` database) |
 | KV + Doc-status | PostgreSQL | `postgres` (from `storage.yml`, `POSTGRES_LIGHTRAG_DB` database) |
 
-**Inference:** LLMs come from **OpenRouter** via the OpenAI-compatible binding (`LLM_BINDING=openai` + `OPENROUTER_BASE_URL`). Role routing: `LIGHTRAG_LLM_MODEL` (extract), `LIGHTRAG_KEYWORD_LLM_MODEL`, `LIGHTRAG_QUERY_LLM_MODEL`. **Embeddings and rerank run in-process** via HuggingFace `sentence-transformers` (`EMBEDDING_BINDING=huggingface`, `RERANK_BINDING=huggingface`) — no Ollama dependency. The HuggingFace model cache is redirected into the workspace via `HF_HOME=/app/data/hf-cache`, so downloaded weights (bge-m3, reranker) persist across restarts alongside the rest of the LightRAG data under `/mnt/lightrag`.
+**Inference — all via OpenRouter, no local models:**
+- **LLMs** — OpenAI-compatible binding (`LLM_BINDING=openai` + `OPENROUTER_BASE_URL`). Role routing: `LIGHTRAG_LLM_MODEL` (extract), `LIGHTRAG_KEYWORD_LLM_MODEL`, `LIGHTRAG_QUERY_LLM_MODEL`.
+- **Embeddings** — `EMBEDDING_BINDING=openai` → `baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB).
+- **Rerank** — `RERANK_BINDING=cohere` → `cohere/rerank-4-fast` ($0.002/search, 100+ languages). Set `RERANK_BINDING: null` to disable.
+- No Ollama, no HuggingFace downloads, no GPU — everything is API-routed.
 
 **Postgres + pgvector (hybrid storage):** KV, doc-status, and vector storage all run on the existing Postgres container, which uses the `pgvector/pgvector:0.8.0-pg17` image (official postgres:17 with the pgvector extension pre-compiled — drop-in compatible with the data dir at `/mnt/postgres`). LightRAG's tables live in a dedicated `lightrag` database (set via `POSTGRES_LIGHTRAG_DB`), auto-created by `postgres/init/10-create-lightrag-db.sql` on first Postgres initialization. LightRAG auto-runs `CREATE EXTENSION IF NOT EXISTS vector` on first connect, so no manual extension setup is needed. Vector index uses HNSW with cosine distance (`POSTGRES_VECTOR_INDEX_TYPE=hnsw_cosine`). Qdrant remains in `storage.yml` for other apps but LightRAG no longer uses it.
 
