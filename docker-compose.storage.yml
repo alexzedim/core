@@ -2,10 +2,12 @@ name: 'storage'
 version: '3.8'
 services:
   postgres:
-    # pgvector image = official postgres:17 + pgvector extension pre-compiled.
-    # Drop-in compatible with vanilla postgres:17.4 data dir at /mnt/postgres.
-    # LightRAG auto-runs `CREATE EXTENSION IF NOT EXISTS vector` on first connect.
-    image: pgvector/pgvector:0.8.0-pg17
+    # Matches the deployed instance exactly: vanilla postgres:17.4, data at
+    # /mnt/postgres via the bind-backed storage_postgres volume (verified live:
+    # postmaster.pid held, pg_wal actively written). Do NOT change the image or
+    # the volume without a planned migration — the box is live and heavily
+    # written. pgvector for LightRAG is the separate pgvector service.
+    image: postgres:17.4
     container_name: postgres
     restart: always
     networks:
@@ -20,7 +22,6 @@ services:
       - '5432:5432'
     volumes:
       - postgres:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
 
   redis:
     image: redis:7.4.3-alpine
@@ -72,43 +73,69 @@ services:
       - "5672:5672"
 
   # ============================================================================
-  # Qdrant — Vector database
+  # RabbitScout — RabbitMQ management UI (alternative to the built-in admin)
   # ============================================================================
-  # Shared by AI/RAG workloads (LightRAG, open-webui, etc.) over the `cmnw`
-  # network. Bind-mount preserves existing data at /mnt/qdrant — do not change
-  # the device path without migrating the data first.
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: qdrant
+  # Next.js dashboard proxying to the RabbitMQ Management API in-network
+  # (rabbitmq:15672 — the -management image is required for exactly this).
+  # Pass-through auth: log in with RabbitMQ credentials, 24h sessions.
+  # UI on host port 15673. The stock admin UI on 15672 keeps working;
+  # unpublishing 15672 later would recreate the rabbitmq container, so only
+  # do that in a quiet window.
+  rabbit-scout:
+    image: ghcr.io/ralve-org/rabbitscout:latest
+    container_name: rabbit-scout
     restart: always
     networks:
       - storage-network
       - cmnw
-    ports:
-      - "6333:6333"      # REST API
-      - "6334:6334"      # gRPC API
     environment:
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
-      QDRANT_READ_ONLY_API_KEY: ${QDRANT_READ_ONLY_API_KEY}
-      QDRANT_TELEMETRY_DISABLED: ${QDRANT_TELEMETRY_DISABLED}
-      QDRANT_LOG_LEVEL: ${QDRANT_LOG_LEVEL}
-    volumes:
-      - qdrant:/qdrant
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 15672
+      RABBITMQ_PROTOCOL: http
+    ports:
+      - '15673:3000'
     security_opt:
       - no-new-privileges:true
 
   # ============================================================================
-  # Neo4j — Graph database (LightRAG graph storage)
+  # pgvector — Postgres with the vector extension, dedicated to LightRAG
   # ============================================================================
-  # Single bind mount for /data (graph databases, transactions, schema) — matches
-  # the one-volume-per-service pattern used by postgres/rabbitmq/qdrant. Logs go
-  # to container stdout; import/plugins dirs stay in the container layer.
+  # pgvector image = official postgres:17 + pgvector pre-compiled (currently
+  # PG 17.11 + pgvector 0.8.6). Separate from the shared vanilla postgres:17.4
+  # above on purpose: the shared instance is heavily written and its container
+  # must not be recreated; LightRAG auto-runs CREATE EXTENSION vector in its
+  # own database here on first connect. Consumed by the oraculum stack
+  # (lightrag service) via the host IP on port 5433.
   #
-  # First-time setup on the server (uid 7474 = the neo4j user inside the
-  # container; Neo4j refuses to start without write access):
+  # Stack env (Portainer): LIGHTRAG_PG_USER, LIGHTRAG_PG_PASSWORD,
+  # LIGHTRAG_PG_DB — no defaults; set the same values in the oraculum stack.
+  pgvector:
+    image: pgvector/pgvector:0.8.6-pg17
+    container_name: pgvector
+    restart: always
+    networks:
+      - storage-network
+      - cmnw
+    environment:
+      POSTGRES_USER: ${LIGHTRAG_PG_USER}
+      POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
+      POSTGRES_DB: ${LIGHTRAG_PG_DB}
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgvector:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================================================
+  # Neo4j — graph storage for LightRAG (oraculum stack)
+  # ============================================================================
+  # Named-volume binds on the big second disk (root fs holding /var/lib/docker
+  # is ~92% full). One-time setup done on the server 2026-08-17:
+  #   mkdir -p /mnt/pgvector /mnt/neo4j && chown 7474:7474 /mnt/neo4j
   #
-  #   sudo mkdir -p /mnt/neo4j
-  #   sudo chown -R 7474:7474 /mnt/neo4j
+  # Stack env (Portainer): NEO4J_PASSWORD — set the same value in the
+  # oraculum stack env.
   neo4j:
     image: neo4j:5.26-community
     container_name: neo4j
@@ -116,15 +143,15 @@ services:
     networks:
       - storage-network
       - cmnw
-    ports:
-      - "7474:7474"      # Neo4j Browser (HTTP)
-      - "7687:7687"      # Bolt protocol
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_server_memory_heap_initial__size: 512m
       NEO4J_server_memory_heap_max__size: 1G
       NEO4J_server_memory_pagecache_size: 512m
+    ports:
+      - "7474:7474"      # Neo4j Browser (HTTP)
+      - "7687:7687"      # Bolt protocol
     volumes:
       - neo4j:/data
     security_opt:
@@ -154,12 +181,12 @@ volumes:
   minio-s3:
     driver: local
 
-  qdrant:
+  pgvector:
     driver: local
     driver_opts:
       type: 'none'
       o: 'bind'
-      device: '/mnt/qdrant'
+      device: '/mnt/pgvector'
 
   neo4j:
     driver: local
