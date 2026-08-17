@@ -1,0 +1,147 @@
+name: 'oraculum'
+services:
+  kerberos:
+    image: ghcr.io/alexzedim/kerberos:latest
+    container_name: kerberos
+    restart: always
+    command: ['node', 'dist/apps/kerberos/src/main.js']
+    env_file:
+      - stack.env
+    environment:
+      NODE_ENV: production
+      APP_NAME: kerberos
+    networks:
+      - oraculum
+
+  indexator:
+    image: ghcr.io/alexzedim/indexator:latest
+    container_name: indexator
+    restart: always
+    command: ['node', 'dist/apps/indexator/src/main.js']
+    env_file:
+      - stack.env
+    environment:
+      NODE_ENV: production
+      APP_NAME: indexator
+    networks:
+      - oraculum
+
+  oracular:
+    image: ghcr.io/alexzedim/oracular:latest
+    container_name: oracular
+    restart: always
+    command: ['node', 'dist/apps/oracular/src/main.js']
+    env_file:
+      - stack.env
+    environment:
+      NODE_ENV: production
+      APP_NAME: oracular
+    networks:
+      - oraculum
+
+  archivum:
+    image: ghcr.io/alexzedim/archivum:latest
+    container_name: archivum
+    restart: always
+    command: ['node', 'dist/apps/archivum/src/main.js']
+    env_file:
+      - stack.env
+    environment:
+      NODE_ENV: production
+      APP_NAME: archivum
+    networks:
+      - oraculum
+
+  lightrag:
+    image: ghcr.io/hkuds/lightrag:latest
+    container_name: lightrag
+    restart: always
+    ports:
+      - '9621:9621'      # LightRAG API + Web UI
+    environment:
+      HOST: 0.0.0.0
+      PORT: 9621
+
+      # ── Security ──
+      LIGHTRAG_API_KEY: ${LIGHTRAG_API_KEY}
+      TOKEN_SECRET: ${LIGHTRAG_TOKEN_SECRET}
+
+      # ── Storage role → engine mapping ──
+      LIGHTRAG_KV_STORAGE: PGKVStorage
+      LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage
+      LIGHTRAG_GRAPH_STORAGE: ${LIGHTRAG_GRAPH_STORAGE}
+      LIGHTRAG_VECTOR_STORAGE: PGVectorStorage
+
+      # ── PostgreSQL (storage-stack pgvector on :5433, NOT the shared
+      #    postgres on :5432 — it has no vector extension) ──
+      POSTGRES_HOST: ${LIGHTRAG_PG_HOST}
+      POSTGRES_PORT: ${LIGHTRAG_PG_PORT}
+      POSTGRES_USER: ${LIGHTRAG_PG_USER}
+      POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
+      POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
+      POSTGRES_WORKSPACE: lightrag
+
+      POSTGRES_VECTOR_INDEX_TYPE: hnsw_cosine
+      POSTGRES_HNSW_M: 16
+      POSTGRES_HNSW_EF: 200
+
+      # ── Neo4j (storage-stack instance) ──
+      NEO4J_URI: bolt://${NEO4J_HOST}:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+
+      # ── LLM (default / EXTRACT role) ──
+      LLM_BINDING: openai
+      LLM_BINDING_HOST: ${OPENROUTER_BASE_URL}
+      LLM_BINDING_API_KEY: ${OPENROUTER_API_KEY}
+      LLM_MODEL: ${LIGHTRAG_LLM_MODEL}
+
+      # ── KEYWORD role ──
+      KEYWORD_LLM_BINDING: openai
+      KEYWORD_LLM_BINDING_HOST: ${OPENROUTER_BASE_URL}
+      KEYWORD_LLM_BINDING_API_KEY: ${OPENROUTER_API_KEY}
+      KEYWORD_LLM_MODEL: ${LIGHTRAG_KEYWORD_LLM_MODEL}
+
+      # ── QUERY role ──
+      QUERY_LLM_BINDING: openai
+      QUERY_LLM_BINDING_HOST: ${OPENROUTER_BASE_URL}
+      QUERY_LLM_BINDING_API_KEY: ${OPENROUTER_API_KEY}
+      QUERY_LLM_MODEL: ${LIGHTRAG_QUERY_LLM_MODEL}
+
+      # ── Embeddings ──
+      EMBEDDING_BINDING: openai
+      EMBEDDING_BINDING_HOST: ${OPENROUTER_BASE_URL}
+      EMBEDDING_BINDING_API_KEY: ${OPENROUTER_API_KEY}
+      EMBEDDING_MODEL: ${LIGHTRAG_EMBEDDING_MODEL}
+
+      # ── Rerank ──
+      RERANK_BINDING: cohere
+      RERANK_BINDING_HOST: ${OPENROUTER_BASE_URL}
+      RERANK_BINDING_API_KEY: ${OPENROUTER_API_KEY}
+      RERANK_MODEL: ${LIGHTRAG_RERANK_MODEL}
+
+      # ── Tuning ──
+      MAX_ASYNC_LLM: 4
+      EXTRACT_ASYNC_LLM: 4
+      EMBEDDING_FUNC_MAX_ASYNC: 16
+      EMBEDDING_BATCH_NUM: 32
+      LLM_TIMEOUT: 120
+      EXTRACT_LLM_TIMEOUT: 240
+    volumes:
+      - lightrag-data:/app/data
+    networks:
+      - oraculum
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  lightrag-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/lightrag'
+
+networks:
+  oraculum:
+    driver: bridge
