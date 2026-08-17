@@ -149,14 +149,8 @@ configs:
 
         - job_name: 'cmnw-api'
           static_configs:
-            - targets: ['cmnw-api:8080']
+              - targets: ['cmnw-api:8080']
           scrape_interval: 15s
           metrics_path: /api/metrics
           scheme: http
 
-        - job_name: 'qdrant'
-          static_configs:
-            - targets: ['128.0.0.255:6333']
-          scrape_interval: 15s
-          metrics_path: /metrics
-          scheme: http
