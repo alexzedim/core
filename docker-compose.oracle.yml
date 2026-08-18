@@ -1,7 +1,7 @@
 name: 'oracle'
 services:
   vpn-oracle:
-    image: ghcr.io/alexzedim/adguard-gateway:latest
+    image: ghcr.io/alexzedim/gateway:latest
     container_name: vpn-oracle
     restart: always
     cap_add:
@@ -15,7 +15,7 @@ services:
       VPN_LOCATION: ${VPN_LOCATION_ORACLE:-}
       GATEWAY_BOOT_DELAY: '0'
     volumes:
-      - vpn-oracle-adguard:/var/lib/adguardvpn
+      - vpn-oracle-gateway:/var/lib/adguardvpn
     ports:
       - '${ORACLE_HTTP_PORT:-3000}:3000'
       - '${ORACLE_VNC_PORT:-6080}:6080'
@@ -43,7 +43,7 @@ services:
       - oracle-secrets:/app/secrets:rw
 
   vpn-oracle-1d:
-    image: ghcr.io/alexzedim/adguard-gateway:latest
+    image: ghcr.io/alexzedim/gateway:latest
     container_name: vpn-oracle-1d
     restart: always
     cap_add:
@@ -57,7 +57,7 @@ services:
       VPN_LOCATION: ${VPN_LOCATION_1D:-}
       GATEWAY_BOOT_DELAY: '40'
     volumes:
-      - vpn-oracle-1d-adguard:/var/lib/adguardvpn
+      - vpn-oracle-1d-gateway:/var/lib/adguardvpn
     ports:
       - '${ORACLE_1D_HTTP_PORT:-3001}:3000'
       - '${ORACLE_1D_VNC_PORT:-6081}:6080'
@@ -85,7 +85,7 @@ services:
       - oracle-1d-secrets:/app/secrets:rw
 
   vpn-oracle-2bd:
-    image: ghcr.io/alexzedim/adguard-gateway:latest
+    image: ghcr.io/alexzedim/gateway:latest
     container_name: vpn-oracle-2bd
     restart: always
     cap_add:
@@ -99,7 +99,7 @@ services:
       VPN_LOCATION: ${VPN_LOCATION_2BD:-}
       GATEWAY_BOOT_DELAY: '80'
     volumes:
-      - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
+      - vpn-oracle-2bd-gateway:/var/lib/adguardvpn
     ports:
       - '${ORACLE_2BD_HTTP_PORT:-3002}:3000'
       - '${ORACLE_2BD_VNC_PORT:-6082}:6080'
@@ -127,7 +127,7 @@ services:
       - oracle-2bd-secrets:/app/secrets:rw
 
   vpn-oracle-3s:
-    image: ghcr.io/alexzedim/adguard-gateway:latest
+    image: ghcr.io/alexzedim/gateway:latest
     container_name: vpn-oracle-3s
     restart: always
     cap_add:
@@ -141,7 +141,7 @@ services:
       VPN_LOCATION: ${VPN_LOCATION_3S:-}
       GATEWAY_BOOT_DELAY: '120'
     volumes:
-      - vpn-oracle-3s-adguard:/var/lib/adguardvpn
+      - vpn-oracle-3s-gateway:/var/lib/adguardvpn
     ports:
       - '${ORACLE_3S_HTTP_PORT:-3003}:3000'
       - '${ORACLE_3S_VNC_PORT:-6083}:6080'
@@ -174,10 +174,10 @@ volumes:
   oracle-1d-secrets:
   oracle-2bd-secrets:
   oracle-3s-secrets:
-  vpn-oracle-adguard:
-  vpn-oracle-1d-adguard:
-  vpn-oracle-2bd-adguard:
-  vpn-oracle-3s-adguard:
+  vpn-oracle-gateway:
+  vpn-oracle-1d-gateway:
+  vpn-oracle-2bd-gateway:
+  vpn-oracle-3s-gateway:
 
 networks:
   oraculum:
