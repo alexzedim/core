@@ -8,20 +8,19 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
     environment:
-      VPN_EMAIL: ${VPN_EMAIL:-}
-      VPN_PASSWORD: ${VPN_PASSWORD:-}
-      GATEWAY_LAN_SUBNETS: ${GATEWAY_LAN_SUBNETS:-}
       VPN_LOCATION: ${VPN_LOCATION_ORACLE:-}
       GATEWAY_BOOT_DELAY: '0'
     volumes:
       - vpn-oracle-gateway:/var/lib/adguardvpn
     ports:
-      - '${ORACLE_HTTP_PORT:-3000}:3000'
-      - '${ORACLE_VNC_PORT:-6080}:6080'
-      - '${ORACLE_CDP_PORT:-9222}:9222'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
     networks:
       - oraculum
+      - cmnw
 
   oracle:
     image: ghcr.io/alexzedim/oracle:latest
@@ -50,20 +49,19 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
     environment:
-      VPN_EMAIL: ${VPN_EMAIL:-}
-      VPN_PASSWORD: ${VPN_PASSWORD:-}
-      GATEWAY_LAN_SUBNETS: ${GATEWAY_LAN_SUBNETS:-}
       VPN_LOCATION: ${VPN_LOCATION_1D:-}
       GATEWAY_BOOT_DELAY: '40'
     volumes:
       - vpn-oracle-1d-gateway:/var/lib/adguardvpn
     ports:
-      - '${ORACLE_1D_HTTP_PORT:-3001}:3000'
-      - '${ORACLE_1D_VNC_PORT:-6081}:6080'
-      - '${ORACLE_1D_CDP_PORT:-9223}:9222'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_VNC_PORT:-6182}:6080'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_CDP_PORT:-9322}:9222'
     networks:
       - oraculum
+      - cmnw
 
   oracle-1d:
     image: ghcr.io/alexzedim/oracle-1d:latest
@@ -92,20 +90,19 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
     environment:
-      VPN_EMAIL: ${VPN_EMAIL:-}
-      VPN_PASSWORD: ${VPN_PASSWORD:-}
-      GATEWAY_LAN_SUBNETS: ${GATEWAY_LAN_SUBNETS:-}
       VPN_LOCATION: ${VPN_LOCATION_2BD:-}
       GATEWAY_BOOT_DELAY: '80'
     volumes:
       - vpn-oracle-2bd-gateway:/var/lib/adguardvpn
     ports:
-      - '${ORACLE_2BD_HTTP_PORT:-3002}:3000'
-      - '${ORACLE_2BD_VNC_PORT:-6082}:6080'
-      - '${ORACLE_2BD_CDP_PORT:-9224}:9222'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_VNC_PORT:-6183}:6080'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_CDP_PORT:-9323}:9222'
     networks:
       - oraculum
+      - cmnw
 
   oracle-2bd:
     image: ghcr.io/alexzedim/oracle-2bd:latest
@@ -134,20 +131,19 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
     environment:
-      VPN_EMAIL: ${VPN_EMAIL:-}
-      VPN_PASSWORD: ${VPN_PASSWORD:-}
-      GATEWAY_LAN_SUBNETS: ${GATEWAY_LAN_SUBNETS:-}
       VPN_LOCATION: ${VPN_LOCATION_3S:-}
       GATEWAY_BOOT_DELAY: '120'
     volumes:
       - vpn-oracle-3s-gateway:/var/lib/adguardvpn
     ports:
-      - '${ORACLE_3S_HTTP_PORT:-3003}:3000'
-      - '${ORACLE_3S_VNC_PORT:-6083}:6080'
-      - '${ORACLE_3S_CDP_PORT:-9225}:9222'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_VNC_PORT:-6184}:6080'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_CDP_PORT:-9324}:9222'
     networks:
       - oraculum
+      - cmnw
 
   oracle-3s:
     image: ghcr.io/alexzedim/oracle-3s:latest
@@ -164,8 +160,6 @@ services:
       DISCORD_TZ_HINT: ${DISCORD_TZ_HINT_3S:-}
       NODE_ENV: production
       APP_NAME: oracle-3s
-      DISCORD_EMAIL: ${DISCORD_EMAIL:-}
-      DISCORD_PASSWORD: ${DISCORD_PASSWORD:-}
     volumes:
       - oracle-3s-secrets:/app/secrets:rw
 
@@ -182,3 +176,5 @@ volumes:
 networks:
   oraculum:
     driver: bridge
+  cmnw:
+    external: true
