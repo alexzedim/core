@@ -2,6 +2,7 @@ name: 'oracle'
 services:
   vpn-oracle:
     image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
     container_name: vpn-oracle
     restart: always
     cap_add:
@@ -24,6 +25,7 @@ services:
 
   oracle:
     image: ghcr.io/alexzedim/oracle:latest
+    pull_policy: if_not_present
     container_name: oracle
     network_mode: 'service:vpn-oracle'
     depends_on:
@@ -43,6 +45,7 @@ services:
 
   vpn-oracle-1d:
     image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
     container_name: vpn-oracle-1d
     restart: always
     cap_add:
@@ -65,6 +68,7 @@ services:
 
   oracle-1d:
     image: ghcr.io/alexzedim/oracle-1d:latest
+    pull_policy: if_not_present
     container_name: oracle-1d
     network_mode: 'service:vpn-oracle-1d'
     depends_on:
@@ -84,6 +88,7 @@ services:
 
   vpn-oracle-2bd:
     image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
     container_name: vpn-oracle-2bd
     restart: always
     cap_add:
@@ -106,6 +111,7 @@ services:
 
   oracle-2bd:
     image: ghcr.io/alexzedim/oracle-2bd:latest
+    pull_policy: if_not_present
     container_name: oracle-2bd
     network_mode: 'service:vpn-oracle-2bd'
     depends_on:
@@ -125,6 +131,7 @@ services:
 
   vpn-oracle-3s:
     image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
     container_name: vpn-oracle-3s
     restart: always
     cap_add:
@@ -147,6 +154,7 @@ services:
 
   oracle-3s:
     image: ghcr.io/alexzedim/oracle-3s:latest
+    pull_policy: if_not_present
     container_name: oracle-3s
     network_mode: 'service:vpn-oracle-3s'
     depends_on:
