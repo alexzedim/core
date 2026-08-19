@@ -36,19 +36,18 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 |--------|-----------|-------|
 | `postgres` | `/mnt/postgres` | storage |
 | `rabbitmq` | `/mnt/rabbitmq` | storage |
-| `qdrant` | `/mnt/qdrant` | storage |
+| `pgvector` | `/mnt/pgvector` | storage |
 | `neo4j` | `/mnt/neo4j` | storage |
 | `nginx-config` | `/mnt/nginx` | routing |
 | `nginx-logs` | `/mnt/nginx/logs` | routing |
 | `nginx-ui-state` | `/mnt/nginx-ui` | routing |
-| `ollama` | `/mnt/ollama` | ai |
-| `lightrag-data` | `/mnt/lightrag` | ai |
+| `lightrag-data` | `/mnt/lightrag` | oraculum |
 | `loki` | `/mnt/loki` | analytics |
 
 These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
 
 ```bash
-sudo mkdir -p /mnt/neo4j /mnt/lightrag
+sudo mkdir -p /mnt/neo4j /mnt/pgvector /mnt/lightrag
 sudo chown -R 7474:7474 /mnt/neo4j   # Neo4j runs as uid 7474; will refuse to start otherwise
 ```
 
@@ -60,32 +59,29 @@ Scrape targets use host IP `128.0.0.255` to reach services that run on the host 
 
 ### Loki — 30-day retention, repo-managed config
 
-Loki does **not** use the image's stock `local-config.yaml`. Its config is the repo file `loki/loki-config.yaml`, mounted via the `configs:` block (`loki_config`) in `docker-compose.analytics.yml`. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
+Loki does **not** use the image's stock `local-config.yaml`. Like Prometheus, its config is embedded **inline** in `docker-compose.analytics.yml` (the `loki_config` `configs:` block) — a `file:`-based source does not work here because Portainer runs compose inside its own container and the daemon rejects the resulting bind path. The file at `loki/loki-config.yaml` is the standalone reference copy; edit both together. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
 
 Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid 10001 — the image's `loki` user). Historically the container ran with no volume and no retention, accumulating ~14.6 GB in its writable layer; that data was migrated to `/mnt/loki` and retention enabled on 2026-08-19.
 
-### LightRAG — Graph-RAG (no Ollama)
+### LightRAG — Graph-RAG in the oraculum stack (no Ollama)
 
-`lightrag` in `docker-compose.ai.yml` is the [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) server. It reuses existing storage services over the `cmnw` network instead of bringing its own:
+`lightrag` in `docker-compose.oraculum.yml` is the [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) server. It sits on the `oraculum` bridge network and reaches the storage stack over the host LAN IP `128.0.0.255`:
 
 | LightRAG role | Engine | Service |
 |---|---|---|
-| Graph storage | Neo4j | `neo4j` (from `storage.yml`) |
-| Vector storage | PostgreSQL + pgvector | `postgres` (from `storage.yml`, `POSTGRES_LIGHTRAG_DB` database) |
-| KV + Doc-status | PostgreSQL | `postgres` (from `storage.yml`, `POSTGRES_LIGHTRAG_DB` database) |
+| Graph storage | Neo4j | `neo4j` (storage stack, `bolt://128.0.0.255:7687`) |
+| Vector storage | PostgreSQL + pgvector | `pgvector` (storage stack, `128.0.0.255:5433`, `lightrag` DB) |
+| KV + Doc-status | PostgreSQL | `pgvector` (same instance and DB) |
+
+**Config comes from the stack env, not the compose file.** All LightRAG vars are injected in their native names (`LLM_BINDING*`, `KEYWORD/QUERY_LLM_*`, `EMBEDDING_*`, `RERANK_*`, `NEO4J_*`, storage-engine selection, HNSW/tuning) via `env_file: stack.env`. The source of truth is `../envs/oraculum/.stack.env` — keep the Portainer stack env in sync with it on deploy, Portainer keeps its own copy. Only `HOST`, `PORT`, `TOKEN_SECRET` and the `POSTGRES_PORT/USER/PASSWORD` overrides stay in the compose: those names clash with the shared `POSTGRES_*` block that the oraculum Node apps consume from the same stack env.
+
+**Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant is gone from the repo entirely.
 
 **Inference — all via OpenRouter, no local models:**
-- **LLMs** — OpenAI-compatible binding (`LLM_BINDING=openai` + `OPENROUTER_BASE_URL`). Role routing: `LIGHTRAG_LLM_MODEL` (extract), `LIGHTRAG_KEYWORD_LLM_MODEL`, `LIGHTRAG_QUERY_LLM_MODEL`.
+- **LLMs** — OpenAI-compatible binding (`LLM_BINDING=openai` + OpenRouter host). Role routing: `LLM_MODEL` (extract), `KEYWORD_LLM_MODEL`, `QUERY_LLM_MODEL`.
 - **Embeddings** — `EMBEDDING_BINDING=openai` → `baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB).
-- **Rerank** — `RERANK_BINDING=cohere` → `cohere/rerank-4-fast` ($0.002/search, 100+ languages). Set `RERANK_BINDING: null` to disable.
+- **Rerank** — `RERANK_BINDING=cohere` → `cohere/rerank-4-fast` ($0.002/search, 100+ languages). Set `RERANK_BINDING` empty to disable.
 - No Ollama, no HuggingFace downloads, no GPU — everything is API-routed.
-
-**Postgres + pgvector (hybrid storage):** KV, doc-status, and vector storage all run on the existing Postgres container, which uses the `pgvector/pgvector:0.8.0-pg17` image (official postgres:17 with the pgvector extension pre-compiled — drop-in compatible with the data dir at `/mnt/postgres`). LightRAG's tables live in a dedicated `lightrag` database (set via `POSTGRES_LIGHTRAG_DB`), auto-created by `postgres/init/10-create-lightrag-db.sql` on first Postgres initialization. LightRAG auto-runs `CREATE EXTENSION IF NOT EXISTS vector` on first connect, so no manual extension setup is needed. Vector index uses HNSW with cosine distance (`POSTGRES_VECTOR_INDEX_TYPE=hnsw_cosine`). Qdrant remains in `storage.yml` for other apps but LightRAG no longer uses it.
-
-**Prerequisite:** if Postgres has already been initialized (data dir exists at `/mnt/postgres`), the init script will NOT run — create the `lightrag` database manually instead:
-```bash
-docker exec postgres psql -U postgres -c "CREATE DATABASE lightrag;"
-```
 
 ---
 
@@ -104,13 +100,15 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 
 | File | Services | Networks |
 |------|----------|----------|
-| `docker-compose.storage.yml` | PostgreSQL 17.4, Redis 7.4.3, MinIO, RabbitMQ 4.2.2, Qdrant, Neo4j | `storage-network` |
+| `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433), Neo4j 5.26 | `storage-network`, `cmnw` |
 | `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter, cert-sync | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
 | `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
 | `docker-compose.gitlab.yml` | GitLab CE | `cmnw` |
-| `docker-compose.ai.yml` | LightRAG, Neo4j, Open WebUI, Qdrant, GitHub MCP, Grafana MCP | `cmnw` |
+| `docker-compose.oracle.yml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
+| `docker-compose.oraculum.yml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
+| `docker-compose.ai.yml` | GitHub MCP, Grafana MCP, Open WebUI | `cmnw` |
 | `docker-compose.control.yml` | Portainer | `traefik` (ext) |
 | `docker-compose.ai-local.yml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
 
