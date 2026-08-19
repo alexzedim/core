@@ -57,7 +57,7 @@ services:
     container_name: lightrag
     restart: always
     ports:
-      - '9621:9621'      # LightRAG API + Web UI
+      - '${LIGHTRAG_BIND_IP:-128.0.0.255}:9621:9621'      # LightRAG API + Web UI (LAN only)
     environment:
       HOST: 0.0.0.0
       PORT: 9621
