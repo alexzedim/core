@@ -16,11 +16,9 @@ services:
     privileged: true # This can be useful for certain hardware integrations, but use with caution. Consider 'devices' for specific hardware passthrough instead.
     restart: unless-stopped
     network_mode: host # Recommended for easier device discovery and integrations. If you use 'bridge' mode, you'll need to map all necessary ports.
-    # If you need to pass through specific USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
+    # If you need to pass through USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
     # devices:
-    #   - /dev/ttyUSB0:/dev/ttyUSB0
-    networks:
-      - traefik  # Add traefik network
+    #  - /dev/ttyUSB0:/dev/ttyUSB0
 
   mosquitto:
     container_name: mosquitto
