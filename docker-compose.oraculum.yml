@@ -53,6 +53,24 @@ services:
     networks:
       - oraculum
 
+  # gateway — VPN exit destination probe (adguardvpn-cli list-locations by cron).
+  # host network is REQUIRED: api.adguard.com is IPv4-null-routed on core and
+  # only reachable over the host's IPv6; PG at 128.0.0.255:5432 stays reachable
+  # from the host netns
+  gateway:
+    image: ghcr.io/alexzedim/gateway:latest
+    container_name: gateway
+    restart: always
+    command: ['node', 'dist/apps/gateway/src/main.js']
+    env_file:
+      - stack.env
+    environment:
+      NODE_ENV: production
+      APP_NAME: gateway
+    network_mode: host
+    volumes:
+      - gateway-adguard:/var/lib/adguardvpn:rw
+
   lightrag:
     image: ghcr.io/hkuds/lightrag:latest
     container_name: lightrag
@@ -142,6 +160,7 @@ volumes:
       type: 'none'
       o: 'bind'
       device: '/mnt/lightrag'
+  gateway-adguard:
 
 networks:
   oraculum:
