@@ -1,18 +1,6 @@
 name: 'ai'
 version: '3.8'
 
-# ============================================================================
-# AI Stack — MCP servers and chat UI
-#
-# LightRAG moved to the oraculum repo (docker-compose.oraculum.yml) together
-# with its dedicated lightrag-pg (pgvector) and neo4j — the shared storage
-# postgres stays vanilla postgres:17.4 and is untouched by oraculum deploys.
-#
-# Services defined here:
-#   - github-mcp-server / mcp-grafana  — MCP integrations
-#   - open-webui                       — chat UI (OpenRouter backend)
-# ============================================================================
-
 services:
   github-mcp-server:
     image: ghcr.io/github/github-mcp-server
