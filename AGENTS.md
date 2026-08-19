@@ -43,6 +43,7 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `nginx-ui-state` | `/mnt/nginx-ui` | routing |
 | `ollama` | `/mnt/ollama` | ai |
 | `lightrag-data` | `/mnt/lightrag` | ai |
+| `loki` | `/mnt/loki` | analytics |
 
 These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
 
@@ -56,6 +57,12 @@ sudo chown -R 7474:7474 /mnt/neo4j   # Neo4j runs as uid 7474; will refuse to st
 `docker-compose.analytics.yml` embeds prometheus config inline via Docker `configs:` block. The file at `prometheus/prometheus.yml` is **not** used by the running stack — it's a standalone reference. When adding scrape targets, edit the inline `prometheus_config` config block in `docker-compose.analytics.yml`.
 
 Scrape targets use host IP `128.0.0.255` to reach services that run on the host network (Home Assistant) or on different compose networks.
+
+### Loki — 30-day retention, repo-managed config
+
+Loki does **not** use the image's stock `local-config.yaml`. Its config is the repo file `loki/loki-config.yaml`, mounted via the `configs:` block (`loki_config`) in `docker-compose.analytics.yml`. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
+
+Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid 10001 — the image's `loki` user). Historically the container ran with no volume and no retention, accumulating ~14.6 GB in its writable layer; that data was migrated to `/mnt/loki` and retention enabled on 2026-08-19.
 
 ### LightRAG — Graph-RAG (no Ollama)
 
@@ -82,6 +89,16 @@ docker exec postgres psql -U postgres -c "CREATE DATABASE lightrag;"
 
 ---
 
+## CI/CD Image Flow — local-first deploys
+
+The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and mount `/var/run/docker.sock`, so every `ghcr.io/alexzedim/*` image they build lands directly in the host Docker daemon **before** it is pushed to GHCR. GHCR is the backup/source of truth; deploys should use the local copy.
+
+- `docker-compose.oracle.yml` and `docker-compose.oraculum.yml` set `pull_policy: if_not_present` on all `ghcr.io/alexzedim/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Third-party images (lightrag etc.) keep the default policy.
+- **Portainer must not force a re-pull for these stacks**: stack webhooks need `?pullimage=false` appended (Portainer webhooks re-pull by default, which overrides any file-level `pull_policy` — verified empirically on compose v2.39.4). In the UI, leave "Re-pull image and redeploy" unchecked. Forced re-pull is still fine when you deliberately want the registry copy (e.g. host rebuild).
+- `docker-prune` (in `docker-compose.git.yml`) is a nightly janitor (04:30 MSK, `DOCKER_PRUNE_CRON`) that prunes stopped containers, unused images, and build cache older than `DOCKER_PRUNE_RETENTION` (default `48h`). Images used by any container are never removed; volumes are never pruned. Logs: `docker logs docker-prune`.
+
+---
+
 ## Stacks
 
 | File | Services | Networks |
@@ -90,7 +107,7 @@ docker exec postgres psql -U postgres -c "CREATE DATABASE lightrag;"
 | `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter, cert-sync | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
-| `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum) | `runner-network` |
+| `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
 | `docker-compose.gitlab.yml` | GitLab CE | `cmnw` |
 | `docker-compose.ai.yml` | LightRAG, Neo4j, Open WebUI, Qdrant, GitHub MCP, Grafana MCP | `cmnw` |
 | `docker-compose.control.yml` | Portainer | `traefik` (ext) |
@@ -117,6 +134,7 @@ docker exec postgres psql -U postgres -c "CREATE DATABASE lightrag;"
 - **Portainer:** mounts `/var/run/docker.sock` — needed for Docker management
 - **GitHub Runners:** mount `/var/run/docker.sock` — Docker-in-Docker builds
 - **ai-local:** `deploy.resources.reservations.devices` for NVIDIA GPU passthrough
+- **gateway (oraculum):** `network_mode: host` — api.adguard.com is IPv4-null-routed on core and only reachable over the host's IPv6
 
 ---
 
