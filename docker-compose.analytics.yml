@@ -3,11 +3,16 @@ version: '3.8'
 services:
   loki:
     container_name: loki
-    image: grafana/loki:latest
+    image: grafana/loki:3.6.3
     restart: always
     ports:
       - '3100:3100'
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki:/loki
+    configs:
+      - source: loki_config
+        target: /etc/loki/local-config.yaml
     networks:
       - loki
 
@@ -110,8 +115,16 @@ networks:
 volumes:
   grafana:
   prometheus_data:
+  loki:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/loki'
 
 configs:
+  loki_config:
+    file: ./loki/loki-config.yaml
   prometheus_config:
     content: |
       global:
