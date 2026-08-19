@@ -82,6 +82,24 @@ services:
       - loki
       - cmnw
 
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:v1.9.1
+    restart: always
+    command:
+      - '--path.rootfs=/rootfs'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+    pid: host
+    ports:
+      - '9100:9100'
+    volumes:
+      - '/:/rootfs:ro,rslave'
+      - '/proc:/host/proc:ro'
+      - '/sys:/host/sys:ro'
+    networks:
+      - cmnw
+
   # Traefik egress
 networks:
   loki:
@@ -127,7 +145,7 @@ configs:
           metrics_path: /minio/v2/metrics/cluster
           scheme: http
           static_configs:
-            - targets: ['minio:9000']
+            - targets: ['128.0.0.255:9000']
   
         - job_name: 'nginx'
           static_configs:
@@ -149,8 +167,21 @@ configs:
 
         - job_name: 'cmnw-api'
           static_configs:
-              - targets: ['cmnw-api:8080']
+            - targets: ['128.0.0.255:8080']
           scrape_interval: 15s
           metrics_path: /api/metrics
+          scheme: http
+
+        - job_name: 'node'
+          static_configs:
+            - targets: ['128.0.0.255:9100']
+          scrape_interval: 15s
+          metrics_path: /metrics
+
+        - job_name: 'qdrant'
+          static_configs:
+            - targets: ['128.0.0.255:6333']
+          scrape_interval: 15s
+          metrics_path: /metrics
           scheme: http
 
