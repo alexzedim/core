@@ -91,8 +91,9 @@ docker exec postgres psql -U postgres -c "CREATE DATABASE lightrag;"
 
 Images built by the repo's GitHub Actions workflows are available on the deploy host without a registry pull; GHCR (`ghcr.io/alexzedim/*`) is the backup/source of truth and deploys use the local copy.
 
-- `docker-compose.oracle.yml` and `docker-compose.oraculum.yml` set `pull_policy: if_not_present` on all `ghcr.io/alexzedim/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Third-party images (lightrag etc.) keep the default policy.
-- **Portainer must not force a re-pull for these stacks**: stack webhooks need `?pullimage=false` appended (Portainer webhooks re-pull by default, which overrides any file-level `pull_policy` — verified empirically on compose v2.39.4). In the UI, leave "Re-pull image and redeploy" unchecked. Forced re-pull is still fine when you deliberately want the registry copy (e.g. host rebuild).
+- `docker-compose.oracle.yml` and `docker-compose.oraculum.yml` set `pull_policy: if_not_present` on all `ghcr.io/alexzedim/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Without this, compose's default policy re-pulls `:latest` from GHCR on every deploy. Third-party images (lightrag etc.) keep the default policy.
+- Stack webhooks (`pullimage`) and the "Re-pull image" GitOps toggle do nothing here; no stack uses GitOps webhooks/polling — deploys are manual ("Pull and redeploy" / "Update the stack"), which runs a plain `docker compose up -d`, so the file-level `pull_policy` is always in effect. Never check a "Re-pull image" option when you want the local copy.
+- Quick health check: in Portainer's stack containers table, an image shown as a bare `sha256:…` fragment means the container was created from a registry pull; the image tag means it was created from the local build.
 - `docker-prune` (in `docker-compose.git.yml`) is a nightly janitor (04:30 MSK, `DOCKER_PRUNE_CRON`) that prunes stopped containers, unused images, and build cache older than `DOCKER_PRUNE_RETENTION` (default `48h`). Images used by any container are never removed; volumes are never pruned. Logs: `docker logs docker-prune`.
 
 ---
