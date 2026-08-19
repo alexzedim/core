@@ -1,17 +1,18 @@
 name: 'oraculum'
 services:
-  kerberos:
-    image: ghcr.io/alexzedim/kerberos:latest
-    container_name: kerberos
-    restart: always
-    command: ['node', 'dist/apps/kerberos/src/main.js']
-    env_file:
-      - stack.env
-    environment:
-      NODE_ENV: production
-      APP_NAME: kerberos
-    networks:
-      - oraculum
+  # kerberos — not deployed yet; uncomment when the fleet goes live
+  # kerberos:
+  #   image: ghcr.io/alexzedim/kerberos:latest
+  #   container_name: kerberos
+  #   restart: always
+  #   command: ['node', 'dist/apps/kerberos/src/main.js']
+  #   env_file:
+  #     - stack.env
+  #   environment:
+  #     NODE_ENV: production
+  #     APP_NAME: kerberos
+  #   networks:
+  #     - oraculum
 
   indexator:
     image: ghcr.io/alexzedim/indexator:latest
