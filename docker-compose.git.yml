@@ -143,11 +143,39 @@ services:
     networks:
       - runner-network
 
+  docker-prune:
+    image: docker:28.5.0-cli
+    container_name: docker-prune
+    restart: unless-stopped
+    environment:
+      TZ: MSK-3
+      DOCKER_PRUNE_CRON: ${DOCKER_PRUNE_CRON:-30 4 * * *}
+      DOCKER_PRUNE_RETENTION: ${DOCKER_PRUNE_RETENTION:-48h}
+    command:
+      - sh
+      - -c
+      - |
+        echo "$${DOCKER_PRUNE_CRON} sh /usr/local/bin/prune.sh $${DOCKER_PRUNE_RETENTION} >> /proc/1/fd/1 2>&1" > /etc/crontabs/root
+        exec /usr/sbin/crond -f -l 8
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: none
+    configs:
+      - source: docker-prune-script
+        target: /usr/local/bin/prune.sh
+
 volumes:
   cmnw-runner-work:
     driver: local
   oraculum-runner-work:
     driver: local
+
+configs:
+  docker-prune-script:
+    content: |
+      docker container prune -f --filter "until=$1"
+      docker image prune -a -f --filter "until=$1"
+      docker builder prune -a -f --filter "until=$1"
 
 networks:
   runner-network:
