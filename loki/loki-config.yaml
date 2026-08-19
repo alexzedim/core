@@ -1,7 +1,8 @@
-# Loki — single binary, filesystem storage.
-# Managed by this repo; mounted into the container via the `configs` block in
-# docker-compose.analytics.yml. Extends the stock image config (tsdb/v13 schema)
-# so data written by the previous stock-config deployment stays readable.
+# Loki — single binary, filesystem storage, 30-day retention.
+# STANDALONE REFERENCE — the running stack loads this config from the inline
+# `loki_config` block in docker-compose.analytics.yml (a `file:` source breaks
+# under Portainer, whose compose resolves paths inside its own container).
+# Keep the two copies in sync when changing the policy.
 auth_enabled: false
 
 server:
