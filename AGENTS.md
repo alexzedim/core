@@ -108,7 +108,7 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 | `docker-compose.gitlab.yml` | GitLab CE | `cmnw` |
 | `docker-compose.oracle.yml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
 | `docker-compose.oraculum.yml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
-| `docker-compose.ai.yml` | GitHub MCP, Grafana MCP, Open WebUI | `cmnw` |
+| `docker-compose.ai.yml` | GitHub MCP, Grafana MCP | `cmnw` |
 | `docker-compose.control.yml` | Portainer | `traefik` (ext) |
 | `docker-compose.ai-local.yml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
 
