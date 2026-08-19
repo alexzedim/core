@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oraculum — Oracle Fleet</title>
+  <style>
+    :root {
+      --bg: #0f1116;
+      --panel: #161a22;
+      --panel-2: #1c212c;
+      --border: #262c38;
+      --text: #e6e9ef;
+      --muted: #8b93a3;
+      --accent: #5865f2;
+      --accent-2: #7289da;
+      --ok: #3ba55d;
+      --warn: #faa81a;
+      --bad: #ed4245;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 500px at 80% -10%, rgba(88, 101, 242, .18), transparent 60%),
+        radial-gradient(900px 400px at 10% 110%, rgba(114, 137, 218, .10), transparent 60%),
+        var(--bg);
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 64px; }
+    header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+    .sigil {
+      width: 44px; height: 44px; border-radius: 12px; flex: none;
+      background: linear-gradient(135deg, var(--accent), #9b59f5);
+      display: grid; place-items: center;
+      font-size: 22px; color: #fff;
+      box-shadow: 0 6px 24px rgba(88, 101, 242, .35);
+    }
+    h1 { font-size: 24px; margin: 0; letter-spacing: .2px; }
+    h1 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .sub .dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--warn); margin-right: 6px; vertical-align: 1px;
+      transition: background .3s;
+    }
+    .sub .dot.ok { background: var(--ok); }
+    .sub .dot.bad { background: var(--bad); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    a.card {
+      display: block; padding: 18px 20px; border-radius: 14px;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--text); text-decoration: none;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    a.card:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--panel-2); }
+    .card .k { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 6px; }
+    .card .v { font-size: 17px; font-weight: 600; }
+    .card .d { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.45; }
+    .card .ext { color: var(--accent-2); font-size: 12px; font-family: ui-monospace, monospace; margin-top: 8px; display: block; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin: 32px 0 12px; }
+    .fleet { display: flex; flex-wrap: wrap; gap: 10px; }
+    .fleet a {
+      padding: 8px 14px; border-radius: 999px; font-size: 13px;
+      color: var(--muted); text-decoration: none;
+      background: var(--panel); border: 1px solid var(--border);
+      transition: color .15s, border-color .15s;
+    }
+    .fleet a:hover { color: var(--text); border-color: var(--accent); }
+    .fleet a.here { color: #fff; background: linear-gradient(135deg, var(--accent), #9b59f5); border-color: transparent; }
+    footer { margin-top: 40px; color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="sigil">◉</div>
+      <h1>Oraculum <small id="variant">oracle fleet</small></h1>
+    </header>
+    <div class="sub"><span class="dot" id="live-dot"></span><span id="live-text">checking pipeline…</span></div>
+
+    <div class="grid">
+      <a class="card" href="/status/page">
+        <div class="k">Pipeline</div>
+        <div class="v">Status Dashboard</div>
+        <div class="d">Token, client, login and event-flow stages — auto-refresh 5s.</div>
+      </a>
+      <a class="card" href="/logs/page">
+        <div class="k">Diagnostics</div>
+        <div class="v">Event Log</div>
+        <div class="d">Recent MESSAGE_* events from the ring buffer — auto-refresh 3s.</div>
+      </a>
+      <a class="card" href="/status">
+        <div class="k">Raw</div>
+        <div class="v">Status JSON</div>
+        <div class="d">Machine-readable snapshot of the full pipeline state.</div>
+      </a>
+      <a class="card" id="vnc-card" href="#" target="_blank" rel="noopener">
+        <div class="k">Human Auth</div>
+        <div class="v">noVNC Desktop</div>
+        <div class="d">Live Chrome desktop for 2FA / Cloudflare solving.</div>
+        <span class="ext" id="vnc-addr"></span>
+      </a>
+      <a class="card" id="cdp-card" href="#" target="_blank" rel="noopener">
+        <div class="k">Debug</div>
+        <div class="v">Chrome CDP</div>
+        <div class="d">DevTools remote-debugging endpoint targets.</div>
+        <span class="ext" id="cdp-addr"></span>
+      </a>
+    </div>
+
+    <h2>Fleet</h2>
+    <div class="fleet" id="fleet"></div>
+
+    <footer>oraculum · vpn-gateway netns · served by cmnw-nginx</footer>
+  </div>
+
+  <script>
+    var FLEET = [
+      { host: 'oracle',      vnc: 6181, cdp: 9321 },
+      { host: 'oracle-1d',   vnc: 6182, cdp: 9322 },
+      { host: 'oracle-2bd',  vnc: 6183, cdp: 9323 },
+      { host: 'oracle-3s',   vnc: 6184, cdp: 9324 },
+    ];
+    var DOMAIN = '.cmnw.ru';
+    var me = FLEET.find(function (v) { return v.host + DOMAIN === location.hostname; })
+      || { host: location.hostname.split('.')[0], vnc: 6080, cdp: 9222 };
+
+    document.getElementById('variant').textContent = me.host;
+    document.title = 'Oraculum — ' + me.host;
+
+    document.getElementById('vnc-card').href = 'http://' + location.hostname + ':' + me.vnc + '/vnc.html';
+    document.getElementById('vnc-addr').textContent = ':' + me.vnc + '/vnc.html';
+    document.getElementById('cdp-card').href = 'http://' + location.hostname + ':' + me.cdp + '/json/version';
+    document.getElementById('cdp-addr').textContent = ':' + me.cdp + '/json/version';
+
+    document.getElementById('fleet').innerHTML = FLEET.map(function (v) {
+      var here = v.host === me.host;
+      return '<a' + (here ? ' class="here"' : ' href="https://' + v.host + DOMAIN + '/"') + '>' + v.host + '</a>';
+    }).join('');
+
+    var dot = document.getElementById('live-dot');
+    var text = document.getElementById('live-text');
+    function refresh() {
+      fetch('/status').then(function (r) { return r.json(); }).then(function (j) {
+        var live = j.events && j.events.node && j.events.node.lastEventAt &&
+          (Date.now() - j.events.node.lastEventAt) < 120000;
+        var client = j.client && j.client.user ? j.client.user : '';
+        dot.className = 'dot ' + (live ? 'ok' : 'bad');
+        text.textContent = live
+          ? 'pipeline live' + (client ? ' — ' + client : '')
+          : 'no node events in the last 2 min';
+      }).catch(function () {
+        dot.className = 'dot bad';
+        text.textContent = 'status unreachable';
+      });
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
