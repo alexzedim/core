@@ -3,6 +3,7 @@ services:
   # kerberos — not deployed yet; uncomment when the fleet goes live
   # kerberos:
   #   image: ghcr.io/alexzedim/kerberos:latest
+  #   pull_policy: if_not_present
   #   container_name: kerberos
   #   restart: always
   #   command: ['node', 'dist/apps/kerberos/src/main.js']
@@ -16,6 +17,7 @@ services:
 
   indexator:
     image: ghcr.io/alexzedim/indexator:latest
+    pull_policy: if_not_present
     container_name: indexator
     restart: always
     command: ['node', 'dist/apps/indexator/src/main.js']
@@ -29,6 +31,7 @@ services:
 
   oracular:
     image: ghcr.io/alexzedim/oracular:latest
+    pull_policy: if_not_present
     container_name: oracular
     restart: always
     command: ['node', 'dist/apps/oracular/src/main.js']
@@ -42,6 +45,7 @@ services:
 
   archivum:
     image: ghcr.io/alexzedim/archivum:latest
+    pull_policy: if_not_present
     container_name: archivum
     restart: always
     command: ['node', 'dist/apps/archivum/src/main.js']
@@ -55,6 +59,7 @@ services:
 
   gateway:
     image: ghcr.io/alexzedim/gateway:latest
+    pull_policy: if_not_present
     container_name: gateway
     restart: always
     command: ['node', 'dist/apps/gateway/src/main.js']
