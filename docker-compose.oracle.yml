@@ -13,6 +13,7 @@ services:
       - stack.env
     environment:
       VPN_LOCATION: ${VPN_LOCATION_ORACLE:-}
+      APP_NAME: oracle
       GATEWAY_BOOT_DELAY: '0'
     volumes:
       - vpn-oracle-adguard:/var/lib/adguardvpn
@@ -56,6 +57,7 @@ services:
       - stack.env
     environment:
       VPN_LOCATION: ${VPN_LOCATION_1D:-}
+      APP_NAME: oracle-1d
       GATEWAY_BOOT_DELAY: '40'
     volumes:
       - vpn-oracle-1d-adguard:/var/lib/adguardvpn
@@ -99,6 +101,7 @@ services:
       - stack.env
     environment:
       VPN_LOCATION: ${VPN_LOCATION_2BD:-}
+      APP_NAME: oracle-2bd
       GATEWAY_BOOT_DELAY: '80'
     volumes:
       - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
@@ -142,6 +145,7 @@ services:
       - stack.env
     environment:
       VPN_LOCATION: ${VPN_LOCATION_3S:-}
+      APP_NAME: oracle-3s
       GATEWAY_BOOT_DELAY: '120'
     volumes:
       - vpn-oracle-3s-adguard:/var/lib/adguardvpn
