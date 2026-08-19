@@ -51,33 +51,6 @@ services:
     networks:
       - edge
 
-  # Auto-syncs the cmnw.ru cert from Yandex Cloud Certificate Manager into the
-  # nginx-config volume (-> /etc/nginx/.certs on host = /mnt/nginx/.certs) and
-  # reloads nginx when it changes. See cert-sync/README.md for host setup.
-  #
-  # Image is built & published by .github/workflows/docker-cert-sync.yml.
-  # Portainer runs `compose pull` before `up`, so the image MUST exist on a
-  # registry — the local `build:` alone isn't enough (it left Portainer unable
-  # to pull "cmnw/cert-sync:local"). `build:` is kept so `up --build` still
-  # works from the CLI for local iteration.
-  cert-sync:
-    build: ./cert-sync
-    image: ghcr.io/alexzedim/core/cert-sync:latest
-    pull_policy: missing
-    container_name: cmnw-cert-sync
-    restart: unless-stopped
-    environment:
-      - TZ=Europe/Moscow
-      - YC_CERT_ID=${YC_CERT_ID}
-    volumes:
-      - nginx-config:/certs                    # shares the same volume nginx reads (writable here)
-      - /var/run/docker.sock:/var/run/docker.sock  # for `docker exec cmnw-nginx nginx -s reload`
-      - /mnt/cert-sync/secrets:/secrets:ro     # authorized_key.json lives on the host (see cert-sync/README.md)
-    networks:
-      - edge
-    depends_on:
-      - nginx
-
 networks:
   edge:
     name: cmnw_edge
