@@ -40,8 +40,7 @@ services:
 
         # Load environment from file
         env_file:
-            - .env
-            - .env.production
+            - stack.env
 
         # Port mapping (host:container)
         ports:
@@ -267,7 +266,7 @@ services:
             - QUEUE_NAME=default
 
         env_file:
-            - .env
+            - stack.env
 
         volumes:
             - ./app:/usr/src/app:ro
