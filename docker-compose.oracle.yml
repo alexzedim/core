@@ -17,6 +17,7 @@ services:
       GATEWAY_BOOT_DELAY: '0'
     volumes:
       - vpn-oracle-adguard:/var/lib/adguardvpn
+      - oracle-geo:/var/lib/oraculum
     ports:
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
@@ -43,6 +44,7 @@ services:
       APP_NAME: oracle
     volumes:
       - oracle-secrets:/app/secrets:rw
+      - oracle-geo:/var/lib/oraculum:ro
 
   vpn-oracle-1d:
     image: ghcr.io/alexzedim/adguard:latest
@@ -61,6 +63,7 @@ services:
       GATEWAY_BOOT_DELAY: '40'
     volumes:
       - vpn-oracle-1d-adguard:/var/lib/adguardvpn
+      - oracle-1d-geo:/var/lib/oraculum
     ports:
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_VNC_PORT:-6182}:6080'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_CDP_PORT:-9322}:9222'
@@ -87,6 +90,7 @@ services:
       APP_NAME: oracle-1d
     volumes:
       - oracle-1d-secrets:/app/secrets:rw
+      - oracle-1d-geo:/var/lib/oraculum:ro
 
   vpn-oracle-2bd:
     image: ghcr.io/alexzedim/adguard:latest
@@ -105,6 +109,7 @@ services:
       GATEWAY_BOOT_DELAY: '80'
     volumes:
       - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
+      - oracle-2bd-geo:/var/lib/oraculum
     ports:
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_VNC_PORT:-6183}:6080'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_CDP_PORT:-9323}:9222'
@@ -131,6 +136,7 @@ services:
       APP_NAME: oracle-2bd
     volumes:
       - oracle-2bd-secrets:/app/secrets:rw
+      - oracle-2bd-geo:/var/lib/oraculum:ro
 
   vpn-oracle-3s:
     image: ghcr.io/alexzedim/adguard:latest
@@ -149,6 +155,7 @@ services:
       GATEWAY_BOOT_DELAY: '120'
     volumes:
       - vpn-oracle-3s-adguard:/var/lib/adguardvpn
+      - oracle-3s-geo:/var/lib/oraculum
     ports:
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_VNC_PORT:-6184}:6080'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_CDP_PORT:-9324}:9222'
@@ -174,8 +181,13 @@ services:
       APP_NAME: oracle-3s
     volumes:
       - oracle-3s-secrets:/app/secrets:rw
+      - oracle-3s-geo:/var/lib/oraculum:ro
 
 volumes:
+  oracle-geo:
+  oracle-1d-geo:
+  oracle-2bd-geo:
+  oracle-3s-geo:
   oracle-secrets:
   oracle-1d-secrets:
   oracle-2bd-secrets:
