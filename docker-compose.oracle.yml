@@ -12,7 +12,7 @@ services:
     env_file:
       - stack.env
     environment:
-      VPN_LOCATION: ${VPN_LOCATION_ORACLE:-}
+      VPN_TZ_PREFERENCE: ${VPN_TZ_PREFERENCE_ORACLE:-}
       APP_NAME: oracle
       GATEWAY_BOOT_DELAY: '0'
     volumes:
@@ -39,7 +39,6 @@ services:
     shm_size: '1gb'
     command: ['node', 'dist/apps/oracle/src/main.js']
     environment:
-      DISCORD_TZ_HINT: ${DISCORD_TZ_HINT_ORACLE:-}
       NODE_ENV: production
       APP_NAME: oracle
     volumes:
@@ -58,7 +57,6 @@ services:
     env_file:
       - stack.env
     environment:
-      VPN_LOCATION: ${VPN_LOCATION_1D:-}
       APP_NAME: oracle-1d
       GATEWAY_BOOT_DELAY: '40'
     volumes:
@@ -85,7 +83,6 @@ services:
     shm_size: '1gb'
     command: ['node', 'dist/apps/oracle-1d/src/main.js']
     environment:
-      TZ: ${TZ_1D:-}
       NODE_ENV: production
       APP_NAME: oracle-1d
     volumes:
@@ -104,7 +101,6 @@ services:
     env_file:
       - stack.env
     environment:
-      VPN_LOCATION: ${VPN_LOCATION_2BD:-}
       APP_NAME: oracle-2bd
       GATEWAY_BOOT_DELAY: '80'
     volumes:
@@ -131,7 +127,6 @@ services:
     shm_size: '1gb'
     command: ['node', 'dist/apps/oracle-2bd/src/main.js']
     environment:
-      TZ: ${TZ_2BD:-}
       NODE_ENV: production
       APP_NAME: oracle-2bd
     volumes:
@@ -150,7 +145,7 @@ services:
     env_file:
       - stack.env
     environment:
-      VPN_LOCATION: ${VPN_LOCATION_3S:-}
+      VPN_TZ_PREFERENCE: ${VPN_TZ_PREFERENCE_3S:-}
       APP_NAME: oracle-3s
       GATEWAY_BOOT_DELAY: '120'
     volumes:
@@ -176,7 +171,6 @@ services:
       - stack.env
     command: ['node', 'dist/apps/oracle-3s/src/main.js']
     environment:
-      DISCORD_TZ_HINT: ${DISCORD_TZ_HINT_3S:-}
       NODE_ENV: production
       APP_NAME: oracle-3s
     volumes:
