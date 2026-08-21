@@ -35,7 +35,6 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `postgres` | `/mnt/postgres` | storage |
 | `rabbitmq` | `/mnt/rabbitmq` | storage |
 | `pgvector` | `/mnt/pgvector` | storage |
-| `neo4j` | `/mnt/neo4j` | storage |
 | `nginx-config` | `/mnt/nginx` | routing |
 | `nginx-logs` | `/mnt/nginx/logs` | routing |
 | `nginx-ui-state` | `/mnt/nginx-ui` | routing |
@@ -44,8 +43,7 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
 
 ```bash
-sudo mkdir -p /mnt/neo4j /mnt/pgvector
-sudo chown -R 7474:7474 /mnt/neo4j   # Neo4j runs as uid 7474; will refuse to start otherwise
+sudo mkdir -p /mnt/pgvector
 ```
 
 ### Prometheus Config — Dual Source
@@ -74,7 +72,7 @@ Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid
 
 **Config comes from the stack env, not the compose file.** All LightRAG vars are injected in their native names (`LLM_MODEL`/`QUERY_LLM_MODEL`/`LLM_BINDING_HOST`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `RERANK_*`, `LIGHTRAG_GRAPH_STORAGE`, HNSW/tuning) via `env_file: stack.env`. The source of truth is `../envs/oraculum/.stack.env` — keep the Portainer stack env in sync with it on deploy, Portainer keeps its own copy. Only the `POSTGRES_HOST/PORT/USER/PASSWORD/DATABASE` overrides stay in the compose: those names clash with the shared `POSTGRES_*` block that the oraculum Node apps consume from the same stack env. KV/vector/doc-status storages are hardcoded to the PG backends in the fork — no env selects them. The container is stateless (no volume): graph, vectors, KV and doc-status all live in postgres.
 
-**Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant is gone from the repo entirely; neo4j (storage stack) is no longer used by lightrag — candidate for decommission.
+**Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant and neo4j are gone from the repo entirely; the LightRAG fork now stores its graph in postgres via `PGTableGraphStorage`.
 
 **Inference — all via OpenRouter, no local models:**
 - **LLMs** — `LLM_MODEL` (extract, `deepseek/deepseek-v4-flash`) and `QUERY_LLM_MODEL` (answers, `deepseek/deepseek-v4-flash`) against `LLM_BINDING_HOST` (OpenRouter). Single model — text-only, 1M ctx, bounded reasoning overhead (~150 tokens), dodges the fork's broken reasoning-disable path on OpenRouter.
@@ -99,7 +97,7 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 
 | File | Services | Networks |
 |------|----------|----------|
-| `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433), Neo4j 5.26 | `storage-network`, `cmnw` |
+| `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
 | `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
