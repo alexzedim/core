@@ -77,7 +77,7 @@ Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid
 **Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant is gone from the repo entirely; neo4j (storage stack) is no longer used by lightrag — candidate for decommission.
 
 **Inference — all via OpenRouter, no local models:**
-- **LLMs** — `LLM_MODEL` (extract, `qwen/qwen3.7-flash`) and `QUERY_LLM_MODEL` (answers, `deepseek/deepseek-v4-flash`) against `LLM_BINDING_HOST` (OpenRouter).
+- **LLMs** — `LLM_MODEL` (extract, `deepseek/deepseek-v4-flash`) and `QUERY_LLM_MODEL` (answers, `deepseek/deepseek-v4-flash`) against `LLM_BINDING_HOST` (OpenRouter). Single model — text-only, 1M ctx, bounded reasoning overhead (~150 tokens), dodges the fork's broken reasoning-disable path on OpenRouter.
 - **Embeddings** — `EMBEDDING_MODEL=baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB); `EMBEDDING_DIM=1024` must match.
 - **Rerank** — `RERANK_MODEL=cohere/rerank-4-fast` via `RERANK_BINDING_HOST` (OpenRouter).
 - No Ollama, no HuggingFace downloads, no GPU — everything is API-routed.
