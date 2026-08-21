@@ -41,7 +41,7 @@ services:
       APP_NAME: oracle
     volumes:
       - oracle-secrets:/app/secrets:rw
-      - oracle-geo:/var/lib/oraculum:ro
+      - oracle-geo:/var/lib/oraculum
 
   vpn-oracle-1d:
     image: ghcr.io/alexzedim/adguard:latest
@@ -84,7 +84,7 @@ services:
       APP_NAME: oracle-1d
     volumes:
       - oracle-1d-secrets:/app/secrets:rw
-      - oracle-1d-geo:/var/lib/oraculum:ro
+      - oracle-1d-geo:/var/lib/oraculum
 
   vpn-oracle-2bd:
     image: ghcr.io/alexzedim/adguard:latest
@@ -127,7 +127,7 @@ services:
       APP_NAME: oracle-2bd
     volumes:
       - oracle-2bd-secrets:/app/secrets:rw
-      - oracle-2bd-geo:/var/lib/oraculum:ro
+      - oracle-2bd-geo:/var/lib/oraculum
 
   vpn-oracle-3s:
     image: ghcr.io/alexzedim/adguard:latest
@@ -169,7 +169,7 @@ services:
       APP_NAME: oracle-3s
     volumes:
       - oracle-3s-secrets:/app/secrets:rw
-      - oracle-3s-geo:/var/lib/oraculum:ro
+      - oracle-3s-geo:/var/lib/oraculum
 
 volumes:
   oracle-geo:
