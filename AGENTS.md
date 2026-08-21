@@ -14,13 +14,11 @@ Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — each has its own SSL cert in `/etc
 
 GitLab SSH is proxied through nginx `stream` block on port `2222` → `gitlab:22`.
 
-### Certificate automation — cert-sync
+### Certificate automation — Selectel Certificate Manager
 
-`cmnw.ru`'s TLS cert is issued by **Yandex Cloud Certificate Manager** (Let's Encrypt, auto-renewed on YC's side). The **cert-sync** sidecar (`docker-compose.routing.yml`) bridges those renewals onto the self-hosted nginx: nightly at 03:15 MSK (and once on startup) it pulls the chain + key via `yc certificate-manager certificate content`, validates them, and reloads nginx only when they changed. `cmnw.me` / `cmnw.xyz` are unaffected — they keep using nginx-ui's own ACME.
+`cmnw.ru`'s TLS cert (wildcard `*.cmnw.ru` + apex) is issued and auto-renewed by **Selectel Certificate Manager** (Let's Encrypt; DNS-01 validation runs automatically because the `cmnw.ru` zone is hosted on Selectel DNS and the domain is delegated to `a/b/c/d.ns.selectel.ru`). Deploying renewals onto nginx is manual for now: download from the panel (Продукты → Менеджер сертификатов → сертификат `cmnw`), write the files to the shared `nginx-config` volume — `/mnt/nginx/.certs/cmnw.ru.{pem,key}` on the host = `/etc/nginx/.certs/` in the nginx container (key `chmod 600`) — then `docker exec cmnw-nginx nginx -t && docker exec cmnw-nginx nginx -s reload`. The download is also scriptable via the panel API (`x-auth-token` auth): `GET https://cloud.api.selcloud.ru/certificate-manager/v1/cert/{cert_id}/ca_chain` and `.../private_key`, where `cert_id` is the knox id shown in the certificate's UID field. Current cert expires 2026-11-19. `cmnw.me` / `cmnw.xyz` are unaffected — they keep using nginx-ui's own ACME.
 
-The sidecar writes into the shared `nginx-config` volume (`/certs/.certs/` inside the container = `/mnt/nginx/.certs` on the host = `/etc/nginx/.certs` in nginx), so no nginx config changes were needed. It reloads nginx via the Docker socket (`docker exec cmnw-nginx nginx -s reload`).
-
-**Credentials:** the YC service-account key (role `certificate-manager.certificates.downloader`) is provided via `YC_AUTHORIZED_KEY` (full `authorized_key.json` contents — set in Portainer env / `.env`), or alternatively bind-mounted at `/secrets/authorized_key.json`. The cert ID lives in `YC_CERT_ID`. See `cert-sync/README.md` for one-time setup.
+The former `cert-sync` sidecar (which pulled the cert from Yandex Cloud Certificate Manager nightly) and its GHCR build workflow were removed when the domain moved to Selectel.
 
 ### Shared External Network: `cmnw`
 
@@ -101,7 +99,7 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 | File | Services | Networks |
 |------|----------|----------|
 | `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433), Neo4j 5.26 | `storage-network`, `cmnw` |
-| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter, cert-sync | `edge`, `cmnw` |
+| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
 | `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
