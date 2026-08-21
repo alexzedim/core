@@ -73,34 +73,25 @@ services:
       - gateway-adguard:/var/lib/adguardvpn:rw
 
   lightrag:
-    image: ghcr.io/hkuds/lightrag:latest
+    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.3f1a73f8
     container_name: lightrag
     restart: always
     ports:
-      - '${LIGHTRAG_BIND_IP:-128.0.0.255}:9621:9621'      # LightRAG API + Web UI (LAN only)
+      - '${LIGHTRAG_BIND_IP:-128.0.0.255}:9621:8084'      # LightRAG fork API (LAN only)
     env_file:
       - stack.env
     environment:
-      HOST: 0.0.0.0
-      PORT: 9621
-      TOKEN_SECRET: ${LIGHTRAG_TOKEN_SECRET}
+      POSTGRES_HOST: ${LIGHTRAG_PG_HOST}
       POSTGRES_PORT: ${LIGHTRAG_PG_PORT}
       POSTGRES_USER: ${LIGHTRAG_PG_USER}
       POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
-    volumes:
-      - lightrag-data:/app/data
+      POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
     networks:
       - oraculum
     security_opt:
       - no-new-privileges:true
 
 volumes:
-  lightrag-data:
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/mnt/lightrag'
   gateway-adguard:
 
 networks:

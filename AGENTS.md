@@ -39,13 +39,12 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `nginx-config` | `/mnt/nginx` | routing |
 | `nginx-logs` | `/mnt/nginx/logs` | routing |
 | `nginx-ui-state` | `/mnt/nginx-ui` | routing |
-| `lightrag-data` | `/mnt/lightrag` | oraculum |
 | `loki` | `/mnt/loki` | analytics |
 
 These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
 
 ```bash
-sudo mkdir -p /mnt/neo4j /mnt/pgvector /mnt/lightrag
+sudo mkdir -p /mnt/neo4j /mnt/pgvector
 sudo chown -R 7474:7474 /mnt/neo4j   # Neo4j runs as uid 7474; will refuse to start otherwise
 ```
 
@@ -67,18 +66,20 @@ Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid
 
 | LightRAG role | Engine | Service |
 |---|---|---|
-| Graph storage | Neo4j | `neo4j` (storage stack, `bolt://128.0.0.255:7687`) |
-| Vector storage | PostgreSQL + pgvector | `pgvector` (storage stack, `128.0.0.255:5433`, `lightrag` DB) |
+| Graph storage | PostgreSQL (`PGTableGraphStorage`, no AGE) | `pgvector` (storage stack, `128.0.0.255:5433`, `lightrag` DB) |
+| Vector storage | PostgreSQL + pgvector | `pgvector` (same instance and DB) |
 | KV + Doc-status | PostgreSQL | `pgvector` (same instance and DB) |
 
-**Config comes from the stack env, not the compose file.** All LightRAG vars are injected in their native names (`LLM_BINDING*`, `KEYWORD/QUERY_LLM_*`, `EMBEDDING_*`, `RERANK_*`, `NEO4J_*`, storage-engine selection, HNSW/tuning) via `env_file: stack.env`. The source of truth is `../envs/oraculum/.stack.env` — keep the Portainer stack env in sync with it on deploy, Portainer keeps its own copy. Only `HOST`, `PORT`, `TOKEN_SECRET` and the `POSTGRES_PORT/USER/PASSWORD` overrides stay in the compose: those names clash with the shared `POSTGRES_*` block that the oraculum Node apps consume from the same stack env.
+**Image — private fork, GHCR is storage only.** `ghcr.io/alexzedim/lightrag:latest` is a mirror fork of `gitlab.cmnw.ru/sigma/lightrag` (sigma wrapper app + vendored LightRAG engine; ADRs in `docs/adr/` of the fork). The source never lives on GitHub; the image is built and pushed to GHCR manually. Container listens on **8084** (hardcoded), host port stays 9621 via `:8084` mapping. The app has **no built-in auth** — the published port is LAN-only (`128.0.0.255`), keep it that way. API: `POST /create` → `POST /process` → `POST /track`, queries via `POST /read` (scope-based, multi-workspace, 429+`Retry-After` on GPU saturation). Workspaces are per-request (`workspace_id`), one worker per workspace, names lowercased.
 
-**Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant is gone from the repo entirely.
+**Config comes from the stack env, not the compose file.** All LightRAG vars are injected in their native names (`LLM_MODEL`/`QUERY_LLM_MODEL`/`LLM_BINDING_HOST`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `RERANK_*`, `LIGHTRAG_GRAPH_STORAGE`, HNSW/tuning) via `env_file: stack.env`. The source of truth is `../envs/oraculum/.stack.env` — keep the Portainer stack env in sync with it on deploy, Portainer keeps its own copy. Only the `POSTGRES_HOST/PORT/USER/PASSWORD/DATABASE` overrides stay in the compose: those names clash with the shared `POSTGRES_*` block that the oraculum Node apps consume from the same stack env. KV/vector/doc-status storages are hardcoded to the PG backends in the fork — no env selects them. The container is stateless (no volume): graph, vectors, KV and doc-status all live in postgres.
+
+**Dedicated pgvector instance:** the `pgvector` service (image `pgvector/pgvector:0.8.6-pg17`, data at `/mnt/pgvector`) is separate from the shared `postgres` (vanilla `postgres:17.4` on :5432, untouched by LightRAG). The `lightrag` database and its user are created on first init from `LIGHTRAG_PG_*` in the storage stack env (`../envs/storage/.stack.env`) — keep those credentials identical in both stack envs. Vector index uses HNSW with cosine distance. Qdrant is gone from the repo entirely; neo4j (storage stack) is no longer used by lightrag — candidate for decommission.
 
 **Inference — all via OpenRouter, no local models:**
-- **LLMs** — OpenAI-compatible binding (`LLM_BINDING=openai` + OpenRouter host). Role routing: `LLM_MODEL` (extract), `KEYWORD_LLM_MODEL`, `QUERY_LLM_MODEL`.
-- **Embeddings** — `EMBEDDING_BINDING=openai` → `baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB).
-- **Rerank** — `RERANK_BINDING=cohere` → `cohere/rerank-4-fast` ($0.002/search, 100+ languages). Set `RERANK_BINDING` empty to disable.
+- **LLMs** — `LLM_MODEL` (extract, `qwen/qwen3.7-flash`) and `QUERY_LLM_MODEL` (answers, `google/gemini-3.7-flash`) against `LLM_BINDING_HOST` (OpenRouter).
+- **Embeddings** — `EMBEDDING_MODEL=baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB); `EMBEDDING_DIM=1024` must match.
+- **Rerank** — `RERANK_MODEL=cohere/rerank-4-fast` via `RERANK_BINDING_HOST` (OpenRouter).
 - No Ollama, no HuggingFace downloads, no GPU — everything is API-routed.
 
 ---
