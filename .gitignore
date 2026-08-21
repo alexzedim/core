@@ -16,10 +16,6 @@
 !/nginx/.certs/.gitkeep
 /nginx/.htpasswd
 
-# cert-sync secrets (authorized_key.json lives on the host bind mount, never committed)
-/cert-sync/secrets/*
-!/cert-sync/secrets/.gitkeep
-
 # Docker data
 /volumes
 
