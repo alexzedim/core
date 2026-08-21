@@ -14,10 +14,9 @@ Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — each has its own SSL cert in `/etc
 
 GitLab SSH is proxied through nginx `stream` block on port `2222` → `gitlab:22`.
 
-### Certificate automation — cert-sync
+### Certificate automation — Selectel Certificate Manager
 
-
-The sidecar writes into the shared `nginx-config` volume (`/certs/.certs/` inside the container = `/mnt/nginx/.certs` on the host = `/etc/nginx/.certs` in nginx), so no nginx config changes were needed. It reloads nginx via the Docker socket (`docker exec cmnw-nginx nginx -s reload`).
+`cmnw.ru`'s TLS cert (wildcard `*.cmnw.ru` + apex) is issued and auto-renewed by **Selectel Certificate Manager** (Let's Encrypt; DNS-01 validation runs automatically because the `cmnw.ru` zone is hosted on Selectel DNS and the domain is delegated to `a/b/c/d.ns.selectel.ru`). Deploying renewals onto nginx is manual for now: download from the panel (Продукты → Менеджер сертификатов → сертификат `cmnw`), write the files to the shared `nginx-config` volume — `/mnt/nginx/.certs/cmnw.ru.{pem,key}` on the host = `/etc/nginx/.certs/` in the nginx container (key `chmod 600`) — then `docker exec cmnw-nginx nginx -t && docker exec cmnw-nginx nginx -s reload`. The download is also scriptable via the panel API (`x-auth-token` auth): `GET https://cloud.api.selcloud.ru/certificate-manager/v1/cert/{cert_id}/ca_chain` and `.../private_key`, where `cert_id` is the knox id shown in the certificate's UID field. Current cert expires 2026-11-19. `cmnw.me` / `cmnw.xyz` are unaffected — they keep using nginx-ui's own ACME.
 
 
 ### Shared External Network: `cmnw`
@@ -99,7 +98,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 | File | Services | Networks |
 |------|----------|----------|
 | `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433), Neo4j 5.26 | `storage-network`, `cmnw` |
-| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter, cert-sync | `edge`, `cmnw` |
+| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
 | `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
 | `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
