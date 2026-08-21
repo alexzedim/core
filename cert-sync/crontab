@@ -1,6 +1,0 @@
-# crontab for cmnw-cert-sync — pulls the cmnw.ru cert daily at 03:15 (MSK).
-# The container runs in TZ=Europe/Moscow, so this is local server time.
-# Output is appended to /var/log/cert-sync.log (visible via docker logs too).
-SHELL=/bin/sh
-PATH=/usr/local/bin:/usr/bin:/bin
-15 3 * * * /usr/local/bin/sync-cmnw-ru-cert.sh >> /var/log/cert-sync.log 2>&1
