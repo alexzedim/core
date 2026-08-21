@@ -105,30 +105,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # ============================================================================
-  # Neo4j — graph storage for LightRAG (oraculum stack)
-  # ============================================================================
-  neo4j:
-    image: neo4j:5.26-community
-    container_name: neo4j
-    restart: always
-    networks:
-      - storage-network
-      - cmnw
-    environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
-      NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_server_memory_heap_initial__size: 512m
-      NEO4J_server_memory_heap_max__size: 1G
-      NEO4J_server_memory_pagecache_size: 512m
-    ports:
-      - '${NEO4J_BIND_IP:-128.0.0.255}:7474:7474'      # Neo4j Browser (HTTP, LAN only)
-      - '${NEO4J_BIND_IP:-128.0.0.255}:7687:7687'      # Bolt protocol (LAN only)
-    volumes:
-      - neo4j:/data
-    security_opt:
-      - no-new-privileges:true
-
 networks:
   storage-network:
     driver: bridge
@@ -159,11 +135,4 @@ volumes:
       type: 'none'
       o: 'bind'
       device: '/mnt/pgvector'
-
-  neo4j:
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/mnt/neo4j'
 
