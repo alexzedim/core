@@ -40,6 +40,9 @@ services:
     environment:
       NODE_ENV: production
       APP_NAME: oracular
+      HTTP_PROXY: http://127.0.0.1:3128
+      HTTPS_PROXY: http://127.0.0.1:3128
+      NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
     networks:
       - oraculum
 
@@ -68,6 +71,12 @@ services:
     environment:
       NODE_ENV: production
       APP_NAME: gateway
+      FORWARD_PROXY_BIND: 0.0.0.0
+      FORWARD_PROXY_PORT: 3128
+      FORWARD_PROXY_HEALTH_PORT: 3129
+      FORWARD_PROXY_UPSTREAM_TIMEOUT_MS: 15000
+      FORWARD_PROXY_HEADER_READ_TIMEOUT_MS: 10000
+      FORWARD_PROXY_MAX_HEADER_BYTES: 65536
     network_mode: host
     volumes:
       - gateway-adguard:/var/lib/adguardvpn:rw
@@ -86,6 +95,9 @@ services:
       POSTGRES_USER: ${LIGHTRAG_PG_USER}
       POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
       POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
+      HTTP_PROXY: http://127.0.0.1:3128
+      HTTPS_PROXY: http://127.0.0.1:3128
+      NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
     networks:
       - oraculum
     security_opt:
