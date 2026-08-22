@@ -73,7 +73,7 @@ services:
       - gateway-adguard:/var/lib/adguardvpn:rw
 
   lightrag:
-    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.3f1a73f8
+    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.1fc04125
     container_name: lightrag
     restart: always
     ports:
