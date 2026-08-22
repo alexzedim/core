@@ -40,8 +40,8 @@ services:
     environment:
       NODE_ENV: production
       APP_NAME: oracular
-      HTTP_PROXY: http://127.0.0.1:3128
-      HTTPS_PROXY: http://127.0.0.1:3128
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
       NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
     networks:
       - oraculum
@@ -96,8 +96,8 @@ services:
       POSTGRES_USER: ${LIGHTRAG_PG_USER}
       POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
       POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
-      HTTP_PROXY: http://127.0.0.1:3128
-      HTTPS_PROXY: http://127.0.0.1:3128
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
       NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
     networks:
       - oraculum
