@@ -82,7 +82,7 @@ Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid
 
 **Inference — all via OpenRouter, no local models:**
 - **LLMs** — `LLM_MODEL` (extract, `deepseek/deepseek-v4-flash`) and `QUERY_LLM_MODEL` (answers, `deepseek/deepseek-v4-flash`) against `LLM_BINDING_HOST` (OpenRouter). Single model — text-only, 1M ctx, bounded reasoning overhead (~150 tokens), dodges the fork's broken reasoning-disable path on OpenRouter.
-- **Embeddings** — `EMBEDDING_MODEL=baai/bge-m3` ($0.01/M tokens, 1024 dims, strong multilingual/Russian per ruMTEB); `EMBEDDING_DIM=1024` must match.
+- **Embeddings** — `EMBEDDING_MODEL=qwen/qwen3-embedding-0.6b` via OpenRouter ($0.01/M tokens, 1024 dims, 32k context). Switched from `baai/bge-m3` because enriched Discord documents (message + author + channel + parent-context metadata) hit the 8k ceiling with HTTP 400 from bge-m3; qwen3-embedding-0.6b is the same price and same 1024-dim output, so no DB schema or vector-index rebuild needed beyond re-embedding the corpus. `EMBEDDING_DIM=1024` must match.
 - **Rerank** — `RERANK_MODEL=cohere/rerank-4-fast` via `RERANK_BINDING_HOST` (OpenRouter).
 - No Ollama, no HuggingFace downloads, no GPU — everything is API-routed.
 
