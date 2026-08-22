@@ -82,7 +82,7 @@ services:
       - gateway-adguard:/var/lib/adguardvpn:rw
 
   lightrag:
-    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.9d9023c5
+    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.aa3bb12a
     pull_policy: if_not_present
     container_name: lightrag
     restart: always
