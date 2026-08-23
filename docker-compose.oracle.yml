@@ -171,19 +171,112 @@ services:
       - oracle-3s-secrets:/app/secrets:rw
       - oracle-3s-geo:/var/lib/oraculum
 
+  vpn-oracle-4qr:
+    image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
+    container_name: vpn-oracle-4qr
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
+    environment:
+      APP_NAME: oracle-4qr
+    volumes:
+      - vpn-oracle-4qr-adguard:/var/lib/adguardvpn
+      - oracle-4qr-geo:/var/lib/oraculum
+    ports:
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_4QR_LOGIN_PORT:-6185}:3000'
+    networks:
+      - oraculum
+      - cmnw
+
+  oracle-4qr:
+    image: ghcr.io/alexzedim/oracle-4qr:latest
+    pull_policy: if_not_present
+    container_name: oracle-4qr
+    network_mode: 'service:vpn-oracle-4qr'
+    depends_on:
+      vpn-oracle-4qr:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - stack.env
+    command: ['node', 'dist/apps/oracle-4qr/src/main.js']
+    environment:
+      APP_NAME: oracle-4qr
+      REMOTE_AUTH_KEY_PATH: /app/secrets/remote-auth-key.pem
+    volumes:
+      - oracle-4qr-secrets:/app/secrets:rw
+      - oracle-4qr-geo:/var/lib/oraculum
+
+  vpn-oracle-5se:
+    image: ghcr.io/alexzedim/adguard:latest
+    pull_policy: if_not_present
+    container_name: vpn-oracle-5se
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - stack.env
+    environment:
+      APP_NAME: oracle-5se
+      SELKIES_TURN_ENABLED: 'true'
+    volumes:
+      - vpn-oracle-5se-adguard:/var/lib/adguardvpn
+      - oracle-5se-geo:/var/lib/oraculum
+    ports:
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_LOGIN_PORT:-6186}:3000'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_SELKIES_PORT:-6187}:6080'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478/udp'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:49152-65535:49152-65535/udp'
+    networks:
+      - oraculum
+      - cmnw
+
+  oracle-5se:
+    image: ghcr.io/alexzedim/oracle-5se:latest
+    pull_policy: if_not_present
+    container_name: oracle-5se
+    network_mode: 'service:vpn-oracle-5se'
+    depends_on:
+      vpn-oracle-5se:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - stack.env
+    shm_size: '1gb'
+    command: ['sh', '-c', './entrypoint.sh']
+    environment:
+      APP_NAME: oracle-5se
+    volumes:
+      - oracle-5se-secrets:/app/secrets:rw
+      - oracle-5se-geo:/var/lib/oraculum
+
 volumes:
   oracle-geo:
   oracle-1d-geo:
   oracle-2bd-geo:
   oracle-3s-geo:
+  oracle-4qr-geo:
+  oracle-5se-geo:
   oracle-secrets:
   oracle-1d-secrets:
   oracle-2bd-secrets:
   oracle-3s-secrets:
+  oracle-4qr-secrets:
+  oracle-5se-secrets:
   vpn-oracle-adguard:
   vpn-oracle-1d-adguard:
   vpn-oracle-2bd-adguard:
   vpn-oracle-3s-adguard:
+  vpn-oracle-4qr-adguard:
+  vpn-oracle-5se-adguard:
 
 networks:
   oraculum:
