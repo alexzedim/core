@@ -207,7 +207,6 @@ services:
     command: ['node', 'dist/apps/oracle-4qr/src/main.js']
     environment:
       APP_NAME: oracle-4qr
-      REMOTE_AUTH_KEY_PATH: /app/secrets/remote-auth-key.pem
     volumes:
       - oracle-4qr-secrets:/app/secrets:rw
       - oracle-4qr-geo:/var/lib/oraculum
@@ -225,7 +224,6 @@ services:
       - stack.env
     environment:
       APP_NAME: oracle-5se
-      SELKIES_TURN_ENABLED: 'true'
     volumes:
       - vpn-oracle-5se-adguard:/var/lib/adguardvpn
       - oracle-5se-geo:/var/lib/oraculum
