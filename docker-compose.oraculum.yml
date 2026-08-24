@@ -16,7 +16,7 @@ services:
   #     - oraculum
 
   indexator:
-    image: ghcr.io/alexzedim/indexator:v1.1.7
+    image: ghcr.io/alexzedim/indexator:v1.1.8
     pull_policy: if_not_present
     container_name: indexator
     restart: always
