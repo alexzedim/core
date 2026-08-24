@@ -155,6 +155,7 @@ services:
   oracle-3s:
     image: ghcr.io/alexzedim/oracle-3s:latest
     pull_policy: if_not_present
+    restart: always
     container_name: oracle-3s
     network_mode: 'service:vpn-oracle-3s'
     depends_on:
@@ -232,7 +233,7 @@ services:
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_SELKIES_PORT:-6187}:6080'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478'
       - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478/udp'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:49152-65535:49152-65535/udp'
+      - '${ORACLE_BIND_IP:-128.0.0.255}:49160-49260:49160-49260/udp'
     networks:
       - oraculum
       - cmnw
