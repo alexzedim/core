@@ -16,7 +16,7 @@ services:
   #     - oraculum
 
   indexator:
-    image: ghcr.io/alexzedim/indexator:latest
+    image: ghcr.io/alexzedim/indexator:v1.1.7
     pull_policy: if_not_present
     container_name: indexator
     restart: always
@@ -82,7 +82,7 @@ services:
       - gateway-adguard:/var/lib/adguardvpn:rw
 
   lightrag:
-    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.9e67d8bb
+    image: ghcr.io/alexzedim/lightrag:1.5.6-exp.b88eec86
     pull_policy: if_not_present
     container_name: lightrag
     restart: always
