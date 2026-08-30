@@ -1,6 +1,6 @@
 # AGENTS.md — Core Infrastructure Repository
 
-**This is infrastructure-as-code for a self-hosted server (`core.cmnw`), not application source code.** There are no tests, no linting, and no build step. All changes are validated with `docker-compose -f docker-compose.<stack>.yml config` and applied with `up -d`.
+**This is infrastructure-as-code for a self-hosted server (`core.cmnw`), not application source code.** There are no tests, no linting, and no build step. All changes are validated with `docker compose -f compose.<stack>.yaml config` and applied with `up -d`.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### Reverse Proxy — Nginx (not Traefik)
 
-Nginx handles all SSL termination and reverse proxying via `docker-compose.routing.yml`. **Nginx-UI** (`cmnw-nginx-ui`) manages the nginx config through a shared `nginx-config` volume — the UI writes, nginx reads as `:ro`. The host directory `nginx/` contains reference configs but the running container loads from the volume mounted at `/mnt/nginx` on the host.
+Nginx handles all SSL termination and reverse proxying via `compose.routing.yaml`. **Nginx-UI** (`cmnw-nginx-ui`) manages the nginx config through a shared `nginx-config` volume — the UI writes, nginx reads as `:ro`. The host directory `nginx/` contains reference configs but the running container loads from the volume mounted at `/mnt/nginx` on the host.
 
 Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — each has its own SSL cert in `/etc/nginx/.certs/` inside the container (`/nginx/.certs/` on host, gitignored).
 
@@ -24,7 +24,7 @@ The former `cert-sync` sidecar (which pulled the cert from Yandex Cloud Certific
 
 Multiple stacks join a pre-created external network named `cmnw` so services can reach each other across compose files. If this network doesn't exist yet, create it: `docker network create cmnw`.
 
-The `traefik` external network referenced by `docker-compose.home.yml` (node-red labels) and `docker-compose.control.yml` (portainer) is a legacy remnant — no Traefik stack exists in this repo. These services will fail to start if that network doesn't exist; create it if needed or remove the references.
+The `traefik` external network referenced by `compose.home.yaml` (node-red labels) and `compose.control.yaml` (portainer) is a legacy remnant — no Traefik stack exists in this repo. These services will fail to start if that network doesn't exist; create it if needed or remove the references.
 
 ### Volume Bind Mounts
 
@@ -48,19 +48,19 @@ sudo mkdir -p /mnt/pgvector
 
 ### Prometheus Config — Dual Source
 
-`docker-compose.analytics.yml` embeds prometheus config inline via Docker `configs:` block. The file at `prometheus/prometheus.yml` is **not** used by the running stack — it's a standalone reference. When adding scrape targets, edit the inline `prometheus_config` config block in `docker-compose.analytics.yml`.
+`compose.analytics.yaml` embeds prometheus config inline via Docker `configs:` block. The file at `prometheus/prometheus.yml` is **not** used by the running stack — it's a standalone reference. When adding scrape targets, edit the inline `prometheus_config` config block in `compose.analytics.yaml`.
 
 Scrape targets use host IP `128.0.0.255` to reach services that run on the host network (Home Assistant) or on different compose networks.
 
 ### Loki — 30-day retention, repo-managed config
 
-Loki does **not** use the image's stock `local-config.yaml`. Like Prometheus, its config is embedded **inline** in `docker-compose.analytics.yml` (the `loki_config` `configs:` block) — a `file:`-based source does not work here because Portainer runs compose inside its own container and the daemon rejects the resulting bind path. The file at `loki/loki-config.yaml` is the standalone reference copy; edit both together. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
+Loki does **not** use the image's stock `local-config.yaml`. Like Prometheus, its config is embedded **inline** in `compose.analytics.yaml` (the `loki_config` `configs:` block) — a `file:`-based source does not work here because Portainer runs compose inside its own container and the daemon rejects the resulting bind path. The file at `loki/loki-config.yaml` is the standalone reference copy; edit both together. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
 
 Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid 10001 — the image's `loki` user). Historically the container ran with no volume and no retention, accumulating ~14.6 GB in its writable layer; that data was migrated to `/mnt/loki` and retention enabled on 2026-08-19.
 
 ### LightRAG — Graph-RAG in the oraculum stack (no Ollama)
 
-`lightrag` in `docker-compose.oraculum.yml` is the [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) server. It sits on the `oraculum` bridge network and reaches the storage stack over the host LAN IP `128.0.0.255`:
+`lightrag` in `compose.oraculum.yaml` is the [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) server. It sits on the `oraculum` bridge network and reaches the storage stack over the host LAN IP `128.0.0.255`:
 
 | LightRAG role | Engine | Service |
 |---|---|---|
@@ -92,12 +92,12 @@ Data lives in the `loki` named volume (bind-mounted at `/mnt/loki`, owned by uid
 
 ## CI/CD Image Flow — local-first deploys
 
-The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and mount `/var/run/docker.sock`, so every `ghcr.io/alexzedim/*` image they build lands directly in the host Docker daemon **before** it is pushed to GHCR. GHCR is the backup/source of truth; deploys should use the local copy.
+The GitHub Actions runners (`compose.git.yaml`) run on this same host and mount `/var/run/docker.sock`, so every `ghcr.io/alexzedim/*` image they build lands directly in the host Docker daemon **before** it is pushed to GHCR. GHCR is the backup/source of truth; deploys should use the local copy.
 
-- `docker-compose.oracle.yml` and `docker-compose.oraculum.yml` set `pull_policy: if_not_present` on all `ghcr.io/alexzedim/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Without this, compose's default policy re-pulls `:latest` from GHCR on every deploy. Third-party images (lightrag etc.) keep the default policy.
+- `compose.oracle.yaml` and `compose.oraculum.yaml` set `pull_policy: if_not_present` on all `ghcr.io/alexzedim/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Without this, compose's default policy re-pulls `:latest` from GHCR on every deploy. Third-party images (lightrag etc.) keep the default policy.
 - Portainer is **CE (2.33.x LTS)**: the stack-webhook `pullimage` parameter and the "Re-pull image" GitOps toggle are Business Edition features and do nothing here. No stack uses GitOps webhooks/polling — deploys are manual ("Pull and redeploy" / "Update the stack"), which runs a plain `docker compose up -d`, so the file-level `pull_policy` is always in effect. Never check a "Re-pull image" option when you want the local copy.
 - Quick health check: in Portainer's stack containers table, an image shown as a bare `sha256:…` fragment means the container was created from a registry pull; the image tag means it was created from the local build.
-- `docker-prune` (in `docker-compose.git.yml`) is a nightly janitor (04:30 MSK, `DOCKER_PRUNE_CRON`) that prunes stopped containers, unused images, and build cache older than `DOCKER_PRUNE_RETENTION` (default `48h`). Images used by any container are never removed; volumes are never pruned. Logs: `docker logs docker-prune`.
+- `docker-prune` (in `compose.git.yaml`) is a nightly janitor (04:30 MSK, `DOCKER_PRUNE_CRON`) that prunes stopped containers, unused images, and build cache older than `DOCKER_PRUNE_RETENTION` (default `48h`). Images used by any container are never removed; volumes are never pruned. Logs: `docker logs docker-prune`.
 
 ---
 
@@ -105,23 +105,23 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 
 | File | Services | Networks |
 |------|----------|----------|
-| `docker-compose.storage.yml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
-| `docker-compose.routing.yml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
-| `docker-compose.analytics.yml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
-| `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
-| `docker-compose.git.yml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
-| `docker-compose.gitlab.yml` | GitLab CE | `cmnw` |
-| `docker-compose.oracle.yml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
-| `docker-compose.oraculum.yml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
-| `docker-compose.ai.yml` | GitHub MCP, Grafana MCP | `cmnw` |
-| `docker-compose.control.yml` | Portainer | `traefik` (ext) |
-| `docker-compose.ai-local.yml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
+| `compose.storage.yaml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
+| `compose.routing.yaml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
+| `compose.analytics.yaml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
+| `compose.home.yaml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
+| `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
+| `compose.gitlab.yaml` | GitLab CE | `cmnw` |
+| `compose.oracle.yaml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
+| `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
+| `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
+| `compose.control.yaml` | Portainer | `traefik` (ext) |
+| `compose.ai-local.yaml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
 
 ---
 
 ## Key Conventions
 
-- **File naming:** `docker-compose.<category>.yml`
+- **File naming:** `compose.<category>.yaml`
 - **Top of each file:** `name: '<category>'` + `version: '3.8'` (some files are missing the version field — add it when editing)
 - **4-space indentation** in all YAML
 - **Ports:** quote as strings (`'5432:5432'`), except where the existing file already uses unquoted — be consistent within each file
@@ -146,15 +146,15 @@ The GitHub Actions runners (`docker-compose.git.yml`) run on this same host and 
 
 ```bash
 # Validate a stack (always do this before up)
-docker-compose -f docker-compose.<stack>.yml config
+docker compose -f compose.<stack>.yaml config
 
 # Start / restart / stop
-docker-compose -f docker-compose.<stack>.yml up -d
-docker-compose -f docker-compose.<stack>.yml restart <service>
-docker-compose -f docker-compose.<stack>.yml down
+docker compose -f compose.<stack>.yaml up -d
+docker compose -f compose.<stack>.yaml restart <service>
+docker compose -f compose.<stack>.yaml down
 
 # Logs
-docker-compose -f docker-compose.<stack>.yml logs -f <service>
+docker compose -f compose.<stack>.yaml logs -f <service>
 
 # Health check
 docker exec postgres pg_isready -U postgres
@@ -170,10 +170,10 @@ docker exec cmnw-nginx nginx -s reload
 
 ## Adding a New Service
 
-1. Add to an existing `docker-compose.<category>.yml` or create a new one
+1. Add to an existing `compose.<category>.yaml` or create a new one
 2. Add env vars to **`.env.example`** (committed template) with a section header (`# ==== Section ====`) — non-secret defaults filled, secrets blank. Then copy the new vars into your local `.env` with real values.
 3. For cross-stack connectivity, join the `cmnw` external network
 4. For persistent data, add a named volume (use bind mount to `/mnt/<name>` if the data needs a known host path)
 5. If the service should be reachable via HTTPS, add a server block in the appropriate `nginx/conf.d/*.conf` file
-6. Validate: `docker-compose -f docker-compose.<category>.yml config`
-7. Deploy: `docker-compose -f docker-compose.<category>.yml up -d`
+6. Validate: `docker compose -f compose.<category>.yaml config`
+7. Deploy: `docker compose -f compose.<category>.yaml up -d`
