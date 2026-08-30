@@ -1,5 +1,4 @@
 name: 'ai'
-version: '3.8'
 
 services:
   github-mcp-server:
