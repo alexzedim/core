@@ -1,5 +1,4 @@
 name: 'analytics'
-version: '3.8'
 services:
   loki:
     container_name: loki
