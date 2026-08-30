@@ -145,17 +145,17 @@
 
 | Stack | Services | Networks |
 |-------|----------|----------|
-| `docker-compose.storage.yml` | PostgreSQL 17.4, Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB) | `storage-network`, `cmnw` |
-| `docker-compose.routing.yml` | Nginx 1.27, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
-| `docker-compose.analytics.yml` | Prometheus, Promtail, Loki 3.6.3, Grafana, Node Exporter, Postgres Exporter | `loki`, `cmnw` |
-| `docker-compose.home.yml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB 2 | `host` (HA), `traefik` (ext) |
-| `docker-compose.git.yml` | 5× GitHub Actions runners, docker-prune janitor | `runner-network` |
-| `docker-compose.gitlab.yml` | GitLab CE 19.0.1 | `cmnw` |
-| `docker-compose.oracle.yml` | 6× vpn-oracle AdGuard VPN gateways + `oracle` / `-1d` / `-2bd` / `-3s` / `-4qr` / `-5se` | `oraculum`, `cmnw` |
-| `docker-compose.oraculum.yml` | indexator, oracular, archivum, gateway, LightRAG | `oraculum` |
-| `docker-compose.ai.yml` | GitHub MCP, Grafana MCP, Open WebUI | `cmnw` |
-| `docker-compose.control.yml` | Portainer CE | `traefik` (ext) |
-| `docker-compose.ai-local.yml` | Ollama + Open WebUI (NVIDIA GPU passthrough) | `ai-local-network` |
+| `compose.storage.yaml` | PostgreSQL 17.4, Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB) | `storage-network`, `cmnw` |
+| `compose.routing.yaml` | Nginx 1.27, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
+| `compose.analytics.yaml` | Prometheus, Promtail, Loki 3.6.3, Grafana, Node Exporter, Postgres Exporter | `loki`, `cmnw` |
+| `compose.home.yaml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB 2 | `host` (HA), `traefik` (ext) |
+| `compose.git.yaml` | 5× GitHub Actions runners, docker-prune janitor | `runner-network` |
+| `compose.gitlab.yaml` | GitLab CE 19.0.1 | `cmnw` |
+| `compose.oracle.yaml` | 6× vpn-oracle AdGuard VPN gateways + `oracle` / `-1d` / `-2bd` / `-3s` / `-4qr` / `-5se` | `oraculum`, `cmnw` |
+| `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, LightRAG | `oraculum` |
+| `compose.ai.yaml` | GitHub MCP, Grafana MCP, Open WebUI | `cmnw` |
+| `compose.control.yaml` | Portainer CE | `traefik` (ext) |
+| `compose.ai-local.yaml` | Ollama + Open WebUI (NVIDIA GPU passthrough) | `ai-local-network` |
 
 <div align="center">
   <p><em>requesting data in millions ops</em></p>
@@ -177,18 +177,18 @@
 
 ```
 core/
-├── docker-compose.storage.yml      # PostgreSQL, Redis, MinIO, RabbitMQ, pgvector
-├── docker-compose.routing.yml      # Nginx, Nginx-UI, metrics exporter
-├── docker-compose.analytics.yml    # Prometheus, Grafana, Loki, Promtail
-├── docker-compose.home.yml         # Home Assistant, Node-RED, Zigbee2MQTT, Z-Wave, InfluxDB
-├── docker-compose.git.yml          # GitHub Actions runners (5×), docker-prune
-├── docker-compose.gitlab.yml       # GitLab CE
-├── docker-compose.oracle.yml       # AdGuard VPN gateways + oracle apps
-├── docker-compose.oraculum.yml     # indexator, oracular, archivum, gateway, LightRAG
-├── docker-compose.ai.yml           # GitHub MCP, Grafana MCP, Open WebUI
-├── docker-compose.control.yml      # Portainer
-├── docker-compose.ai-local.yml     # Ollama + Open WebUI (GPU passthrough)
-├── docker-compose.example.yml      # template / documentation
+├── compose.storage.yaml      # PostgreSQL, Redis, MinIO, RabbitMQ, pgvector
+├── compose.routing.yaml      # Nginx, Nginx-UI, metrics exporter
+├── compose.analytics.yaml    # Prometheus, Grafana, Loki, Promtail
+├── compose.home.yaml         # Home Assistant, Node-RED, Zigbee2MQTT, Z-Wave, InfluxDB
+├── compose.git.yaml          # GitHub Actions runners (5×), docker-prune
+├── compose.gitlab.yaml       # GitLab CE
+├── compose.oracle.yaml       # AdGuard VPN gateways + oracle apps
+├── compose.oraculum.yaml     # indexator, oracular, archivum, gateway, LightRAG
+├── compose.ai.yaml           # GitHub MCP, Grafana MCP, Open WebUI
+├── compose.control.yaml      # Portainer
+├── compose.ai-local.yaml     # Ollama + Open WebUI (GPU passthrough)
+├── compose.example.yaml      # template / documentation
 ├── nginx/                          # reference nginx configs
 ├── prometheus/                     # reference prometheus config
 ├── loki/                           # reference loki config
