@@ -1,5 +1,4 @@
 name: "git"
-version: "3.8"
 services:
   cmnw-github-runner-I:
     image: myoung34/github-runner:latest

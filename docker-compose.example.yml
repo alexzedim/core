@@ -1,7 +1,5 @@
 # Optional: Name for the project (default is directory name)
 name: "example"
-# Docker Compose file format version
-version: '3.8'
 # Define services (containers)
 services:
     # Web application service
