@@ -5,6 +5,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
@@ -48,6 +56,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle-1d
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
@@ -91,6 +107,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle-2bd
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
@@ -134,6 +158,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle-3s
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
@@ -177,6 +209,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle-4qr
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
@@ -217,6 +257,14 @@ services:
     pull_policy: if_not_present
     container_name: vpn-oracle-5se
     restart: always
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 8m
     cap_add:
       - NET_ADMIN
     devices:
