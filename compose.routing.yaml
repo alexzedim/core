@@ -52,9 +52,9 @@ services:
       - ADMIN_USERNAME=${CPM_ADMIN_USERNAME}
       - ADMIN_PASSWORD=${CPM_ADMIN_PASSWORD}
       - CADDY_API_URL=http://cmnw-caddy:2019
-      - BASE_URL=${CPM_BASE_URL:-http://128.0.0.255:3000}
+      - BASE_URL=${CPM_BASE_URL:-http://128.0.0.255:3001}
     ports:
-      - "128.0.0.255:3000:3000"  # panel UI, LAN-only
+      - "128.0.0.255:3001:3000"  # panel UI, LAN-only (3000 is taken by grafana)
     volumes:
       - caddy-manager-data:/app/data
       - caddy-logs:/logs
