@@ -206,11 +206,14 @@ configs:
           static_configs:
             - targets: ['128.0.0.255:9000']
   
-        - job_name: 'nginx'
+        - job_name: 'caddy'
           static_configs:
-            - targets: ['128.0.0.255:9113']
+            - targets: ['cmnw-caddy:2019']
           scrape_interval: 15s
           metrics_path: /metrics
+          # caddy_* series from Caddy's admin API (routing stack, shared cmnw
+          # network). If the panel-generated config turns out not to expose
+          # /metrics on :2019, use the panel's own Prometheus endpoint instead.
 
         - job_name: 'home-assistant'
           metrics_path: /api/prometheus
