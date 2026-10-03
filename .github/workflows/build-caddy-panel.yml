@@ -1,0 +1,67 @@
+name: build-caddy-panel
+
+# Patch-build of fuomag9/caddy-proxy-manager with the Selectel DNS provider
+# added (caddy-dns/selectel module + panel provider registry entry). The
+# upstream is cloned at a pinned tag and patched by caddy-panel/apply-selectel.mjs
+# — no fork to maintain, rebasing = bump UPSTREAM_TAG below (and re-apply if
+# anchors drift). Images land in the host daemon via the local runner before
+# the GHCR push (local-first deploys).
+
+on:
+  push:
+    paths:
+      - 'caddy-panel/**'
+      - '.github/workflows/build-caddy-panel.yml'
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: 'fuomag9/caddy-proxy-manager tag to build'
+        required: false
+        default: 'v1.13.3'
+
+env:
+  UPSTREAM_TAG: ${{ github.event.inputs.upstream_tag || 'v1.13.3' }}
+  UPSTREAM_REPO: https://github.com/fuomag9/caddy-proxy-manager
+  IMAGE_TAG: 1.13.3-selectel
+
+jobs:
+  build:
+    runs-on: [self-hosted]
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone and patch upstream
+        run: |
+          git clone --depth 1 --branch "$UPSTREAM_TAG" "$UPSTREAM_REPO" upstream
+          cp caddy-panel/apply-selectel.mjs upstream/
+          cd upstream
+          node apply-selectel.mjs "$UPSTREAM_TAG"
+          git diff --stat || true
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push caddy image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./upstream
+          file: ./upstream/docker/caddy/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/caddy-proxy-manager-caddy:${{ env.IMAGE_TAG }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./upstream
+          file: ./upstream/docker/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/caddy-proxy-manager-web:${{ env.IMAGE_TAG }}
