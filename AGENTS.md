@@ -6,18 +6,20 @@
 
 ## Architecture
 
-### Reverse Proxy — Nginx (not Traefik)
+### Reverse Proxy — Caddy + caddy-proxy-manager
 
-Nginx handles all SSL termination and reverse proxying via `compose.routing.yaml`. **Nginx-UI** (`cmnw-nginx-ui`) manages the nginx config through a shared `nginx-config` volume — the UI writes, nginx reads as `:ro`. The host directory `nginx/` contains reference configs but the running container loads from the volume mounted at `/mnt/nginx` on the host.
+Caddy (`cmnw-caddy`) handles all SSL termination and reverse proxying via `compose.routing.yaml`. **caddy-proxy-manager** ([fuomag9/caddy-proxy-manager](https://github.com/fuomag9/caddy-proxy-manager), web UI at `http://128.0.0.255:3000`, LAN-only) owns the routing config — proxy hosts, location rules, access lists, certificates — in its SQLite DB at `/mnt/caddy-manager` (**include it in host backups — it is the source of truth; there is no Caddyfile on disk**) and pushes generated JSON to Caddy's admin API (`http://cmnw-caddy:2019`, `routing-internal` network) with zero-downtime reloads. Config changes are made in the panel UI, not in this repo.
 
-Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — each has its own SSL cert in `/etc/nginx/.certs/` inside the container (`/nginx/.certs/` on host, gitignored).
+Panel images are pinned **by digest** (upstream publishes only `:latest`): to upgrade, `docker buildx imagetools inspect ghcr.io/fuomag9/caddy-proxy-manager-<svc>:latest`, review release notes, swap the digest. Their custom Caddy image bundles caddy-l4, Coraza WAF and 23 caddy-dns providers (no selectel — see the cert section below). Container discovery goes through `cmnw-socket-proxy` (tecnativa/docker-socket-proxy) — nothing in this stack mounts the raw docker socket. `cmnw-l4-port-manager` syncs panel-created L4 (TCP/UDP) listeners; unused so far.
 
-GitLab SSH is proxied through nginx `stream` block on port `2222` → `gitlab:22`.
+Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — `me`/`xyz` traffic arrives through Cloudflare (orange-cloud). Ports 80/443 tcp+udp (HTTP/3/QUIC). The old nginx stack (nginx + nginx-ui + nginx-prometheus-exporter) is recoverable from git history; `/mnt/nginx` and the in-repo `nginx/` reference dir were kept through the rollback window and can be removed once Caddy survives a full cert renewal cycle.
 
-### Certificate automation — Selectel Certificate Manager
+GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compose.gitlab.yaml` (replaced the former nginx `stream` block); `gitlab.rb` keeps `gitlab_shell_ssh_port = 2222` so clone URLs stay correct. socat hides real client IPs from gitlab sshd — accepted trade-off; a panel-managed L4 listener can replace the sidecar later.
 
-`cmnw.ru`'s TLS cert (wildcard `*.cmnw.ru` + apex) is issued and auto-renewed by **Selectel Certificate Manager** (Let's Encrypt; DNS-01 validation runs automatically because the `cmnw.ru` zone is hosted on Selectel DNS and the domain is delegated to `a/b/c/d.ns.selectel.ru`). Deploying renewals onto nginx is manual for now: download from the panel (Продукты → Менеджер сертификатов → сертификат `cmnw`), write the files to the shared `nginx-config` volume — `/mnt/nginx/.certs/cmnw.ru.{pem,key}` on the host = `/etc/nginx/.certs/` in the nginx container (key `chmod 600`) — then `docker exec cmnw-nginx nginx -t && docker exec cmnw-nginx nginx -s reload`. The download is also scriptable via the panel API (`x-auth-token` auth): `GET https://cloud.api.selcloud.ru/certificate-manager/v1/cert/{cert_id}/ca_chain` and `.../private_key`, where `cert_id` is the knox id shown in the certificate's UID field. Current cert expires 2026-11-19. `cmnw.me` / `cmnw.xyz` are unaffected — they keep using nginx-ui's own ACME.
+### Certificate automation
 
+- **`cmnw.me` / `cmnw.xyz`** — Cloudflare Origin certificates (issued in the CF dashboard, valid until 2040-12-28), imported into the panel as custom certificates. No ACME involved; renewal means reissuing in Cloudflare (~2040). Both domains are orange-clouded through Cloudflare.
+- **`cmnw.ru`** — issued and auto-renewed by **Selectel Certificate Manager** (Let's Encrypt, DNS-01 runs automatically because the zone is hosted on Selectel DNS, delegated to `a/b/c/d.ns.selectel.ru`). Delivery into the panel is automated by the **`cmnw-cert-sync`** sidecar (built from `cert-sync/` → `ghcr.io/alexzedim/cert-sync` via `.github/workflows/build-cert-sync.yml`, local-first): nightly cron fetches `GET https://cloud.api.selcloud.ru/certificate-manager/v1/cert/{cert_id}/ca_chain` and `.../private_key` (`X-Auth-Token`, `cert_id` = knox id from the certificate's UID field) and upserts it via the panel REST API (`POST/PUT /api/v1/certificates`, Bearer token from the panel's API tokens). Selectel is **not** among the panel's DNS-01 providers — that is why issuance stays at Selectel CM and only delivery is synced. NB: at migration time the cert covered only `cmnw.ru`+`www` — reissue it in Selectel as `*.cmnw.ru`+apex so the LAN-only `oracle-*.cmnw.ru` vhosts get a matching cert. Expiry warnings land in `docker logs cmnw-cert-sync`.
 
 ### Shared External Network: `cmnw`
 
@@ -34,9 +36,12 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `postgres` | `/mnt/postgres` | storage |
 | `rabbitmq` | `/mnt/rabbitmq` | storage |
 | `pgvector` | `/mnt/pgvector` | storage |
-| `nginx-config` | `/mnt/nginx` | routing |
-| `nginx-logs` | `/mnt/nginx/logs` | routing |
-| `nginx-ui-state` | `/mnt/nginx-ui` | routing |
+| `nginx-config` (legacy) | `/mnt/nginx` | routing (rollback window) |
+| `nginx-ui-state` (legacy) | `/mnt/nginx-ui` | routing (rollback window) |
+| `caddy-data` | `/mnt/caddy` | routing |
+| `caddy-config` | `/mnt/caddy-config` | routing |
+| `caddy-logs` | `/mnt/caddy/logs` | routing |
+| `caddy-manager-data` | `/mnt/caddy-manager` | routing — panel SQLite, source of truth, **back this up** |
 | `loki` | `/mnt/loki` | analytics |
 
 These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
@@ -105,11 +110,11 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 | File | Services | Networks |
 |------|----------|----------|
 | `compose.storage.yaml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
-| `compose.routing.yaml` | Nginx, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
+| `compose.routing.yaml` | Caddy (fuomag9 panel image), caddy-proxy-manager (web UI), docker-socket-proxy, l4-port-manager, cert-sync | `edge`, `cmnw`, `routing-internal`, `socket-proxy` |
 | `compose.analytics.yaml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `compose.home.yaml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
 | `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
-| `compose.gitlab.yaml` | GitLab CE | `cmnw` |
+| `compose.gitlab.yaml` | GitLab CE + gitlab-ssh (socat relay, host `:2222` → `gitlab:22`) | `cmnw` |
 | `compose.oracle.yaml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
 | `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
 | `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
@@ -121,7 +126,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 ## Key Conventions
 
 - **File naming:** `compose.<category>.yaml`
-- **Top of each file:** `name: '<category>'` + `version: '3.8'` (some files are missing the version field — add it when editing)
+- **Top of each file:** `name: '<category>'` (no `version:` field — it was dropped repo-wide as obsolete)
 - **4-space indentation** in all YAML
 - **Ports:** quote as strings (`'5432:5432'`), except where the existing file already uses unquoted — be consistent within each file
 - **Env vars:** use `${VAR_NAME}` in compose files. The committed **`.env.example`** is the canonical template listing every variable the stacks reference — non-secret defaults filled in, secrets blanked. Copy it to `.env` per host and fill in real values. The root `.env` is gitignored (see `.gitignore`: `!/.env` then `.env` — the later pattern wins, so `.env` is ignored while `.env.example` is committed). On the production server, secrets are injected via Portainer env or `stack.env` (`env_file`), never committed. When adding a new `${VAR}` to a compose file, add it to `.env.example` in the matching section.
@@ -133,7 +138,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 ### Intentional Exceptions
 
 - **Home Assistant:** `network_mode: host` + `privileged: true` — required for hardware device discovery and integrations
-- **Nginx-UI:** mounts `/var/run/docker.sock` — needed for container discovery
+- **docker-socket-proxy (routing):** mounts `/var/run/docker.sock:ro` behind a restricted API proxy — the panel's only window onto Docker
 - **Portainer:** mounts `/var/run/docker.sock` — needed for Docker management
 - **GitHub Runners:** mount `/var/run/docker.sock` — Docker-in-Docker builds
 - **ai-local:** `deploy.resources.reservations.devices` for NVIDIA GPU passthrough
@@ -161,8 +166,9 @@ docker exec postgres pg_isready -U postgres
 # Backup PostgreSQL
 docker exec postgres pg_dump -U postgres cmnw > backup_$(date +%Y%m%d).sql
 
-# Reload nginx after config change (config is shared volume)
-docker exec cmnw-nginx nginx -s reload
+# Routing config changes are made in the caddy-proxy-manager UI
+# (http://128.0.0.255:3000) — it hot-reloads Caddy itself
+docker logs -f cmnw-caddy
 ```
 
 ---
@@ -173,6 +179,6 @@ docker exec cmnw-nginx nginx -s reload
 2. Add env vars to **`.env.example`** (committed template) with a section header (`# ==== Section ====`) — non-secret defaults filled, secrets blank. Then copy the new vars into your local `.env` with real values.
 3. For cross-stack connectivity, join the `cmnw` external network
 4. For persistent data, add a named volume (use bind mount to `/mnt/<name>` if the data needs a known host path)
-5. If the service should be reachable via HTTPS, add a server block in the appropriate `nginx/conf.d/*.conf` file
+5. If the service should be reachable via HTTPS, add a proxy host in the caddy-proxy-manager UI (or its REST API under `/api/v1/`)
 6. Validate: `docker compose -f compose.<category>.yaml config`
 7. Deploy: `docker compose -f compose.<category>.yaml up -d`
