@@ -7,9 +7,17 @@
 # which in turn pushes it to Caddy. Runs once at container start, then on a
 # cron schedule (busybox crond).
 #
+# Selectel auth: the Certificate Manager API does NOT accept static API keys —
+# it requires a Keystone (Identity v3) project token. We authenticate as a
+# service user (role `member` on the project, see AGENTS.md) on every run and
+# use the 24h X-Subject-Token as X-Auth-Token.
+#
 # Env:
-#   SELECTEL_API_TOKEN  token for cloud.api.selcloud.ru (X-Auth-Token)
-#   SELECTEL_CERT_ID    knox id shown in the certificate's UID field
+#   SELECTEL_USER       service user name        (e.g. cert-sync)
+#   SELECTEL_PASSWORD   service user password
+#   SELECTEL_DOMAIN     Selectel account id      (e.g. 454323)
+#   SELECTEL_PROJECT    project name             (e.g. cmnw)
+#   SELECTEL_CERT_ID    certificate id (knox id shown in the panel's UID field)
 #   CPM_BASE_URL        panel base url        (default http://cmnw-caddy-manager:3000)
 #   CPM_API_TOKEN       panel API token       (Authorization: Bearer)
 #   CPM_CERT_NAME       panel certificate name (default cmnw.ru)
@@ -20,7 +28,10 @@
 
 set -euo pipefail
 
-SELECTEL_API_TOKEN="${SELECTEL_API_TOKEN:?SELECTEL_API_TOKEN not set}"
+SELECTEL_USER="${SELECTEL_USER:?SELECTEL_USER not set}"
+SELECTEL_PASSWORD="${SELECTEL_PASSWORD:?SELECTEL_PASSWORD not set}"
+SELECTEL_DOMAIN="${SELECTEL_DOMAIN:?SELECTEL_DOMAIN not set}"
+SELECTEL_PROJECT="${SELECTEL_PROJECT:?SELECTEL_PROJECT not set}"
 SELECTEL_CERT_ID="${SELECTEL_CERT_ID:?SELECTEL_CERT_ID not set}"
 CPM_BASE_URL="${CPM_BASE_URL:-http://cmnw-caddy-manager:3000}"
 CPM_API_TOKEN="${CPM_API_TOKEN:?CPM_API_TOKEN not set}"
@@ -28,6 +39,8 @@ CPM_CERT_NAME="${CPM_CERT_NAME:-cmnw.ru}"
 CRON_SCHEDULE="${CRON_SCHEDULE:-0 6 * * *}"
 CPM_CERT_FIELD="${CPM_CERT_FIELD:-certificate}"
 CPM_KEY_FIELD="${CPM_KEY_FIELD:-privateKey}"
+IDENTITY_URL="https://cloud.api.selcloud.ru/identity/v3/auth/tokens"
+CERT_API="https://cloud.api.selcloud.ru/certificate-manager/v1/cert/${SELECTEL_CERT_ID}"
 STATE_DIR="/var/lib/cert-sync"
 FINGERPRINT_FILE="$STATE_DIR/last_fingerprint"
 
@@ -35,31 +48,38 @@ log()  { echo "[cert-sync $(date -Is)] $*"; }
 warn() { echo "[cert-sync $(date -Is)] WARNING: $*" >&2; }
 die()  { echo "[cert-sync $(date -Is)] ERROR: $*" >&2; exit 1; }
 
-# Selectel returns either raw PEM or a JSON envelope depending on endpoint
-# version; unwrap JSON, pass everything else through untouched.
-unwrap() {
-    local body="$1"
-    if jq -e . >/dev/null 2>&1 <<<"$body"; then
-        jq -er '.data // .certificate // .private_key // .key // .pem // .result // empty' <<<"$body" 2>/dev/null && return 0
-        [ "${DEBUG:-0}" = "1" ] && warn "JSON body did not contain a recognized PEM field: ${body:0:200}"
-        return 1
-    fi
-    printf '%s' "$body"
+# Keystone project token via the service user. Returns the X-Subject-Token.
+get_selectel_token() {
+    local body resp_token
+    body="$(jq -n \
+        --arg user "$SELECTEL_USER" \
+        --arg password "$SELECTEL_PASSWORD" \
+        --arg domain "$SELECTEL_DOMAIN" \
+        --arg project "$SELECTEL_PROJECT" \
+        '{auth:{identity:{methods:["password"],password:{user:{name:$user,domain:{name:$domain},password:$password}}},scope:{project:{name:$project,domain:{name:$domain}}}}}')"
+    resp_token="$(curl -fsS --max-time 30 -X POST \
+        -H "Content-Type: application/json" \
+        -d "$body" \
+        -D - -o /dev/null \
+        "$IDENTITY_URL" | tr -d '\r' | awk 'tolower($1)=="x-subject-token:"{print $2}')" \
+        || die "Selectel identity auth failed"
+    [ -n "$resp_token" ] || die "Selectel identity auth returned no X-Subject-Token"
+    printf '%s' "$resp_token"
 }
 
-fetch_selectel() {  # $1 = endpoint (ca_chain | private_key)
-    local raw
-    raw="$(curl -fsSL --max-time 60 \
-        -H "X-Auth-Token: ${SELECTEL_API_TOKEN}" \
-        "https://cloud.api.selcloud.ru/certificate-manager/v1/cert/${SELECTEL_CERT_ID}/$1")" \
-        || die "Selectel API call failed for $1"
-    unwrap "$raw" || die "could not decode Selectel response for $1"
+# The CM API returns raw PEM bodies.
+fetch_selectel() {  # $1 = token, $2 = endpoint (ca_chain | private_key)
+    curl -fsSL --max-time 60 \
+        -H "X-Auth-Token: $1" \
+        "${CERT_API}/$2" \
+        || die "Selectel API call failed for $2"
 }
 
 sync_once() {
-    local cert key fingerprint panel_json cert_id
-    cert="$(fetch_selectel ca_chain)"
-    key="$(fetch_selectel private_key)"
+    local token cert key fingerprint panel_json cert_id
+    token="$(get_selectel_token)"
+    cert="$(fetch_selectel "$token" ca_chain)"
+    key="$(fetch_selectel "$token" private_key)"
 
     [[ "$cert" == *"BEGIN CERTIFICATE"* ]] || die "ca_chain is not a PEM certificate"
     [[ "$key"  == *"PRIVATE KEY"*       ]] || die "private_key is not a PEM key"
@@ -100,10 +120,10 @@ sync_once() {
 
     if [ -z "$cert_id" ]; then
         log "certificate '$CPM_CERT_NAME' not found in panel — creating"
-        curl -fsS -o /dev/null -w '%{http_code}' --max-time 30 \
+        curl -fsS -o /dev/null --max-time 30 \
             -X POST -H "Authorization: Bearer ${CPM_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "$payload" "${CPM_BASE_URL}/api/v1/certificates" | grep -qE '20[01]' \
+            -d "$payload" "${CPM_BASE_URL}/api/v1/certificates" \
             || die "panel POST /certificates failed (check field names via CPM_CERT_FIELD/CPM_KEY_FIELD)"
     else
         log "updating panel certificate id=$cert_id"
