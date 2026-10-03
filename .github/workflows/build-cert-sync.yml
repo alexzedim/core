@@ -1,0 +1,34 @@
+name: build-cert-sync
+
+on:
+  push:
+    paths:
+      - 'cert-sync/**'
+      - '.github/workflows/build-cert-sync.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Self-hosted runner on core.cmnw — the image lands in the host Docker
+    # daemon before the push; deploys use the local copy (pull_policy:
+    # if_not_present in compose.routing.yaml).
+    runs-on: [self-hosted]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./cert-sync
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/cert-sync:1.0.0
+            ghcr.io/${{ github.repository_owner }}/cert-sync:latest
