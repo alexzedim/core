@@ -21,7 +21,10 @@ name: 'routing'
 
 services:
   caddy:
-    image: ghcr.io/fuomag9/caddy-proxy-manager-caddy@sha256:adc307a09c10cb7c413de1dc894454aa9bd23aae657d78f718693a01961e2058
+    # upstream fuomag9 image + caddy-dns/selectel — patch-built by
+    # .github/workflows/build-caddy-panel.yml from the pinned upstream tag
+    image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel
+    pull_policy: if_not_present
     container_name: cmnw-caddy
     restart: always
     environment:
@@ -43,7 +46,8 @@ services:
       - routing-internal
 
   caddy-manager:
-    image: ghcr.io/fuomag9/caddy-proxy-manager-web@sha256:bce85c7e356113521e592c1356dd9daad0a990ea201d36d963bcdd905d7bdc23
+    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel
+    pull_policy: if_not_present
     container_name: cmnw-caddy-manager
     restart: always
     environment:
