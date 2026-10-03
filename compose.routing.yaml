@@ -133,24 +133,28 @@ networks:
 
 volumes:
   caddy-data:
+    name: caddy-data
     driver: local
     driver_opts:
       type: none
       o: bind
       device: '/mnt/caddy'
   caddy-config:
+    name: caddy-config
     driver: local
     driver_opts:
       type: none
       o: bind
       device: '/mnt/caddy-config'
   caddy-logs:
+    name: caddy-logs
     driver: local
     driver_opts:
       type: none
       o: bind
       device: '/mnt/caddy/logs'
   caddy-manager-data:
+    name: caddy-manager-data
     driver: local
     driver_opts:
       type: none
