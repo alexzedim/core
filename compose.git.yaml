@@ -109,6 +109,30 @@ services:
     networks:
       - runner-network
 
+  core-github-runner:
+    image: myoung34/github-runner:latest
+    container_name: core-github-runner
+    environment:
+      REPO_URL: https://github.com/alexzedim/core
+      ACCESS_TOKEN: ${GITHUB_TOKEN}
+      RUNNER_NAME: core-runner-I
+      RUNNER_LABELS: docker,linux,self-hosted,core
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - core-runner-work:/tmp/runner/work
+      - ./builds:/builds
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 6G
+        reservations:
+          cpus: "2.0"
+          memory: 4G
+    networks:
+      - runner-network
+
   # Optional: Multiple runners
   oraculum-github-runner-I:
     image: myoung34/github-runner:latest
@@ -165,6 +189,8 @@ services:
 
 volumes:
   cmnw-runner-work:
+    driver: local
+  core-runner-work:
     driver: local
   oraculum-runner-work:
     driver: local
