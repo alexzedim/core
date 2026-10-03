@@ -37,9 +37,9 @@ jobs:
       - name: Clone and patch upstream
         run: |
           git clone --depth 1 --branch "$UPSTREAM_TAG" "$UPSTREAM_REPO" upstream
-          cp caddy-panel/apply-selectel.mjs upstream/
+          cp caddy-panel/apply-selectel.cjs upstream/
           cd upstream
-          node apply-selectel.mjs "$UPSTREAM_TAG"
+          node apply-selectel.cjs "$UPSTREAM_TAG"
           git diff --stat || true
 
       - uses: docker/login-action@v3
