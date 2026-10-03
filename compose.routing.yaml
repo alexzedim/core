@@ -109,7 +109,10 @@ services:
     environment:
       - TZ=Europe/Moscow
       - CRON_SCHEDULE=${CERT_SYNC_CRON:-0 6 * * *}
-      - SELECTEL_API_TOKEN=${SELECTEL_API_TOKEN}
+      - SELECTEL_USER=${SELECTEL_USER:-cert-sync}
+      - SELECTEL_PASSWORD=${SELECTEL_PASSWORD}
+      - SELECTEL_DOMAIN=${SELECTEL_DOMAIN:-454323}
+      - SELECTEL_PROJECT=${SELECTEL_PROJECT:-cmnw}
       - SELECTEL_CERT_ID=${SELECTEL_CERT_ID}
       - CPM_BASE_URL=http://cmnw-caddy-manager:3000
       - CPM_API_TOKEN=${CPM_API_TOKEN}
