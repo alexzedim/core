@@ -68,3 +68,6 @@ WARP.md
 !.vscode/extensions.json
 
 gitlab/config/
+
+# zcode session temp (never commit — may hold secrets)
+.zcode/

@@ -12,7 +12,7 @@ Caddy (`cmnw-caddy`) handles all SSL termination and reverse proxying via `compo
 
 Panel images are pinned **by digest** (upstream publishes only `:latest`): to upgrade, `docker buildx imagetools inspect ghcr.io/fuomag9/caddy-proxy-manager-<svc>:latest`, review release notes, swap the digest. Their custom Caddy image bundles caddy-l4, Coraza WAF and 23 caddy-dns providers (no selectel — see the cert section below). Container discovery goes through `cmnw-socket-proxy` (tecnativa/docker-socket-proxy) — nothing in this stack mounts the raw docker socket. `cmnw-l4-port-manager` syncs panel-created L4 (TCP/UDP) listeners; unused so far.
 
-Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — `me`/`xyz` traffic arrives through Cloudflare (orange-cloud). Ports 80/443 tcp+udp (HTTP/3/QUIC). The old nginx stack (nginx + nginx-ui + nginx-prometheus-exporter) is recoverable from git history; `/mnt/nginx` and the in-repo `nginx/` reference dir were kept through the rollback window and can be removed once Caddy survives a full cert renewal cycle.
+Domains: `cmnw.me`, `cmnw.xyz`, `cmnw.ru` — `me`/`xyz` traffic arrives through Cloudflare (orange-cloud). Ports 80/443 tcp+udp (HTTP/3/QUIC). The nginx era is fully retired (2026-10-03): the old stack lives only in git history (last nginx compose at the caddy cutover (2026-10-03)), a final snapshot of `/mnt/nginx` + `/mnt/nginx-ui` (configs, certs, nginx-ui DB) is archived at `/root/backups/nginx-final-20261003.tar.gz`, and the old volumes/images/host dirs are deleted.
 
 GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compose.gitlab.yaml` (replaced the former nginx `stream` block); `gitlab.rb` keeps `gitlab_shell_ssh_port = 2222` so clone URLs stay correct. socat hides real client IPs from gitlab sshd — accepted trade-off; a panel-managed L4 listener can replace the sidecar later.
 
@@ -36,8 +36,6 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `postgres` | `/mnt/postgres` | storage |
 | `rabbitmq` | `/mnt/rabbitmq` | storage |
 | `pgvector` | `/mnt/pgvector` | storage |
-| `nginx-config` (legacy) | `/mnt/nginx` | routing (rollback window) |
-| `nginx-ui-state` (legacy) | `/mnt/nginx-ui` | routing (rollback window) |
 | `caddy-data` | `/mnt/caddy` | routing |
 | `caddy-config` | `/mnt/caddy-config` | routing |
 | `caddy-logs` | `/mnt/caddy/logs` | routing |
