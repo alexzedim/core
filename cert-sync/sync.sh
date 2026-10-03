@@ -37,8 +37,9 @@ CPM_BASE_URL="${CPM_BASE_URL:-http://cmnw-caddy-manager:3000}"
 CPM_API_TOKEN="${CPM_API_TOKEN:?CPM_API_TOKEN not set}"
 CPM_CERT_NAME="${CPM_CERT_NAME:-cmnw.ru}"
 CRON_SCHEDULE="${CRON_SCHEDULE:-0 6 * * *}"
-CPM_CERT_FIELD="${CPM_CERT_FIELD:-certificate}"
-CPM_KEY_FIELD="${CPM_KEY_FIELD:-privateKey}"
+CPM_CERT_FIELD="${CPM_CERT_FIELD:-certificatePem}"
+CPM_KEY_FIELD="${CPM_KEY_FIELD:-privateKeyPem}"
+CPM_DOMAINS="${CPM_DOMAINS:-cmnw.ru,*.cmnw.ru}"
 IDENTITY_URL="https://cloud.api.selcloud.ru/identity/v3/auth/tokens"
 CERT_API="https://cloud.api.selcloud.ru/certificate-manager/v1/cert/${SELECTEL_CERT_ID}"
 STATE_DIR="/var/lib/cert-sync"
@@ -116,7 +117,8 @@ sync_once() {
         --arg key  "$key" \
         --arg cfield "$CPM_CERT_FIELD" \
         --arg kfield "$CPM_KEY_FIELD" \
-        '{name: $name} + {($cfield): $cert} + {($kfield): $key}')"
+        --argjson domains "$(printf '%s' "$CPM_DOMAINS" | jq -Rc 'split(",")')" \
+        '{name: $name, type: "imported", domainNames: $domains} + {($cfield): $cert} + {($kfield): $key}')"
 
     if [ -z "$cert_id" ]; then
         log "certificate '$CPM_CERT_NAME' not found in panel — creating"
