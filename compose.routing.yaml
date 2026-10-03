@@ -1,55 +1,121 @@
 name: 'routing'
+
+# Caddy edge + caddy-proxy-manager (fuomag9) web panel.
+#
+# Architecture: the panel owns the routing config (vhosts, certificates,
+# access lists) in its SQLite DB (caddy-manager-data -> /mnt/caddy-manager,
+# MUST be included in host backups) and pushes generated JSON to Caddy's
+# admin API (http://cmnw-caddy:2019) over routing-internal. There is no
+# Caddyfile on disk — editing happens in the panel UI at
+# http://128.0.0.255:3000 (LAN-only). Upstream: https://github.com/fuomag9/caddy-proxy-manager
+#
+# Images are pinned by digest (upstream publishes only :latest); bump
+# deliberately: `docker buildx imagetools inspect ghcr.io/fuomag9/caddy-proxy-manager-<svc>:latest`
+# and swap the digest, then review upstream release notes.
+#
+# Certificates: cmnw.me / cmnw.xyz are Cloudflare Origin certs (valid to
+# 2040) imported once via the panel; the cmnw.ru cert is issued by Selectel
+# Certificate Manager (Let's Encrypt, DNS-01 — runs automatically because the
+# zone lives on Selectel DNS) and delivered into the panel by the cert-sync
+# sidecar. See AGENTS.md "Certificate automation".
+
 services:
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: cmnw-nginx
-    restart: unless-stopped
+  caddy:
+    image: ghcr.io/fuomag9/caddy-proxy-manager-caddy@sha256:adc307a09c10cb7c413de1dc894454aa9bd23aae657d78f718693a01961e2058
+    container_name: cmnw-caddy
+    restart: always
     environment:
       - TZ=Europe/Moscow
+      - PRIMARY_DOMAIN=${CADDY_PRIMARY_DOMAIN:-cmnw.me}
     ports:
       - "80:80"
+      - "80:80/udp"   # HTTP/3 Alt-Svc + QUIC
       - "443:443"
-      - "2222:2222"  # GitLab SSH proxy
-    expose:
-      - "8080"
+      - "443:443/udp"  # HTTP/3 (QUIC)
     volumes:
-      - nginx-config:/etc/nginx:ro
-      - nginx-logs:/var/log/nginx
+      - caddy-data:/data       # certs/keys/OCSP — not a cache, never wipe
+      - caddy-config:/config
+      - caddy-logs:/logs
     networks:
       - edge
       - cmnw
+      - routing-internal
 
-  nginx-ui:
-    image: uozi/nginx-ui:latest
-    container_name: cmnw-nginx-ui
-    restart: unless-stopped
+  caddy-manager:
+    image: ghcr.io/fuomag9/caddy-proxy-manager-web@sha256:bce85c7e356113521e592c1356dd9daad0a990ea201d36d963bcdd905d7bdc23
+    container_name: cmnw-caddy-manager
+    restart: always
     environment:
       - TZ=Europe/Moscow
+      - NODE_ENV=production
+      - SESSION_SECRET=${CPM_SESSION_SECRET}
+      - ADMIN_USERNAME=${CPM_ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${CPM_ADMIN_PASSWORD}
+      - CADDY_API_URL=http://cmnw-caddy:2019
+      - BASE_URL=${CPM_BASE_URL:-http://128.0.0.255:3000}
     ports:
-      - "9080:9000"
+      - "128.0.0.255:3000:3000"  # panel UI, LAN-only
     volumes:
-      - nginx-config:/etc/nginx
-      - nginx-ui-state:/etc/nginx-ui
-      - nginx-logs:/var/log/nginx
-      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy-manager-data:/app/data
+      - caddy-logs:/logs
     depends_on:
-      - nginx
+      - caddy
     networks:
-      - edge
-      - cmnw
+      - routing-internal
 
-  nginx-metrics:
-    image: nginx/nginx-prometheus-exporter:1.4.0
-    container_name: cmnw-nginx-metrics
-    restart: unless-stopped
-    command:
-      - -nginx.scrape-uri=http://cmnw-nginx:8080/stub_status
-    ports:
-      - "9113:9113"
-    depends_on:
-      - nginx
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: cmnw-socket-proxy
+    restart: always
+    environment:
+      - CONTAINERS=1
+      - POST=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - IMAGES=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - edge
+      - socket-proxy
+
+  # Keeps panel-created L4 (TCP/UDP) listeners and their published ports in
+  # sync. No panel-managed L4 listeners exist yet — GitLab SSH runs via the
+  # socat sidecar in compose.gitlab.yaml — so the compose dir mount is an
+  # empty placeholder for now.
+  l4-port-manager:
+    image: ghcr.io/fuomag9/caddy-proxy-manager-l4-port-manager@sha256:d6a1e8ea0d45e1cd418d6c91eeee553248304c84ff0130a356d3ec58ba797ecb
+    container_name: cmnw-l4-port-manager
+    restart: always
+    environment:
+      - DATA_DIR=/data
+      - COMPOSE_DIR=/compose
+      - POLL_INTERVAL=${L4_POLL_INTERVAL:-2}
+      - DOCKER_HOST=tcp://cmnw-socket-proxy:2375
+    volumes:
+      - caddy-manager-data:/data
+      - /mnt/caddy-l4:/compose:ro
+    networks:
+      - routing-internal
+      - socket-proxy
+
+  # Pulls the cmnw.ru certificate from Selectel Certificate Manager and
+  # upserts it into the panel via its REST API. Built from ./cert-sync via
+  # .github/workflows/build-cert-sync.yml -> ghcr.io/alexzedim/cert-sync.
+  cert-sync:
+    image: ghcr.io/alexzedim/cert-sync:1.0.0
+    container_name: cmnw-cert-sync
+    restart: always
+    pull_policy: if_not_present
+    environment:
+      - TZ=Europe/Moscow
+      - CRON_SCHEDULE=${CERT_SYNC_CRON:-0 6 * * *}
+      - SELECTEL_API_TOKEN=${SELECTEL_API_TOKEN}
+      - SELECTEL_CERT_ID=${SELECTEL_CERT_ID}
+      - CPM_BASE_URL=http://cmnw-caddy-manager:3000
+      - CPM_API_TOKEN=${CPM_API_TOKEN}
+      - CPM_CERT_NAME=${CERT_SYNC_CERT_NAME:-cmnw.ru}
+    networks:
+      - routing-internal
 
 networks:
   edge:
@@ -57,23 +123,33 @@ networks:
     driver: bridge
   cmnw:
     external: true
+  routing-internal:
+    driver: bridge
+  socket-proxy:
+    driver: bridge
 
 volumes:
-  nginx-config:
+  caddy-data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/nginx'
-  nginx-logs:
+      device: '/mnt/caddy'
+  caddy-config:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/nginx/logs'
-  nginx-ui-state:
+      device: '/mnt/caddy-config'
+  caddy-logs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/nginx-ui'
+      device: '/mnt/caddy/logs'
+  caddy-manager-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: '/mnt/caddy-manager'
