@@ -18,6 +18,22 @@ services:
     networks:
       - cmnw
 
+  # SSH relay for GitLab: host 2222 -> gitlab:22 (replaces the former nginx
+  # stream block in the routing stack). gitlab.rb already sets
+  # gitlab_shell_ssh_port = 2222, so clone URLs stay correct. socat hides the
+  # real client IP from gitlab sshd — accepted trade-off.
+  gitlab-ssh:
+    image: alpine/socat:1.8.0.1
+    container_name: gitlab-ssh
+    restart: always
+    command: tcp-listen:22,fork,reuseaddr tcp-connect:gitlab:22
+    ports:
+      - "2222:22"
+    depends_on:
+      - gitlab
+    networks:
+      - cmnw
+
 networks:
   cmnw:
     external: true
