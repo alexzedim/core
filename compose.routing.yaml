@@ -36,6 +36,7 @@ services:
       - caddy-data:/data       # certs/keys/OCSP — not a cache, never wipe
       - caddy-config:/config
       - caddy-logs:/logs
+      - geoip-data:/usr/share/GeoIP:ro,z  # GeoLite2-Country/ASN.mmdb (DB-IP lite)
     networks:
       - edge
       - cmnw
@@ -58,6 +59,7 @@ services:
     volumes:
       - caddy-manager-data:/app/data
       - caddy-logs:/logs
+      - geoip-data:/usr/share/GeoIP:ro,z
     depends_on:
       - caddy
     networks:
@@ -160,3 +162,10 @@ volumes:
       type: none
       o: bind
       device: '/mnt/caddy-manager'
+  geoip-data:
+    name: geoip-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: '/mnt/caddy-geoip'
