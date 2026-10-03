@@ -44,10 +44,12 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `caddy-manager-data` | `/mnt/caddy-manager` | routing — panel SQLite, source of truth, **back this up** |
 | `loki` | `/mnt/loki` | analytics |
 
-These host directories must exist before `up -d` or the volume will fail to mount. Create any missing ones before first deploy:
+These host directories must exist before `up -d` or the volume will fail to mount, **and ownership must match the container user** (`/mnt/caddy*` → uid 10000 for the panel's caddy image, `/mnt/caddy-manager` → uid 10001, like `/mnt/loki` → 10001) — otherwise Caddy ACME fails with `mkdir /data/caddy: permission denied`:
 
 ```bash
-sudo mkdir -p /mnt/pgvector
+sudo mkdir -p /mnt/caddy /mnt/caddy-config /mnt/caddy/logs /mnt/caddy-manager /mnt/caddy-l4
+sudo chown 10000:10000 /mnt/caddy /mnt/caddy-config /mnt/caddy/logs
+sudo chown 10001:10001 /mnt/caddy-manager
 ```
 
 ### Prometheus Config — Dual Source
