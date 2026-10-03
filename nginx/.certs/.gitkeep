@@ -1,3 +1,0 @@
-# This file preserves the directory structure
-# Certificate files (.pem, .key) are gitignored for security
-# Certificates are stored here for nginx reverse proxy
