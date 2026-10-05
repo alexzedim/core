@@ -1,114 +1,36 @@
 name: 'home'
+
+# Home Assistant only. The old 6-service smart-home template (mosquitto,
+# node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never
+# deployed and is gone (2026-10-05): all current devices are Wi-Fi/cloud
+# (vendor bulbs + smart-hub, smart speaker, robot vacuum vacuum) — no Zigbee/Z-Wave
+# dongles, no MQTT devices.
+#
+# host network is required for mDNS discovery (smart speaker local mode,
+# robot vacuum local control) and binds 8123 directly on the host. LAN-only:
+# http://128.0.0.255:8123 — publish through the Caddy panel later if ever
+# needed. No privileged: no USB/Bluetooth hardware is passed through.
+#
+# Integrations live in HACS (none in core): speaker-integration (AlexxIT) for the
+# smart speaker, vendor-cloud-integration (dzerik) for vendor bulbs + smart-hub (cloud-only
+# via vendor ID OAuth), vacuum-integration (Tasshack) for the robot vacuum.
+
 services:
-  home-assistant:
-    container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:stable
-    volumes:
-      - home-assistant:/config
-      - /etc/localtime:/etc/localtime:ro
-      # Uncomment the line below if you need D-Bus for Bluetooth or other integrations
-      # - /var/run/dbus:/var/run/dbus:ro
-    ports:
-      - "8123:8123"
-    environment:
-      - TZ=${TZ}
-    privileged: true # This can be useful for certain hardware integrations, but use with caution. Consider 'devices' for specific hardware passthrough instead.
-    restart: unless-stopped
-    network_mode: host # Recommended for easier device discovery and integrations. If you use 'bridge' mode, you'll need to map all necessary ports.
-    # If you need to pass through USB devices (e.g., Zigbee/Z-Wave dongle), add them here:
-    # devices:
-    #  - /dev/ttyUSB0:/dev/ttyUSB0
-
-  mosquitto:
-    container_name: mosquitto
-    image: eclipse-mosquitto:latest
-    command: "mosquitto -c /mosquitto-no-auth.conf"
-    volumes:
-      - mosquitto:/mosquitto/config
-      - mosquitto:/mosquitto/data
-      - mosquitto:/mosquitto/log
-    ports:
-      - "1883:1883" # MQTT
-      # - "9001:9001"
-      # Websockets for MQTT
-    restart: unless-stopped
-
-  node-red:
-    container_name: node-red
-    image: nodered/node-red:latest
-    environment:
-      - TZ=${TZ}
-    volumes:
-      -  node-red:/data
-    ports:
-      - "1880:1880"
-    depends_on:
-      - home-assistant
-      - mosquitto
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nodered.rule=Host(`nodered.cmnw.ru`)"  # Add nodered.cmnw.ru to DNS
-      - "traefik.http.routers.nodered.entrypoints=websecure"
-      - "traefik.http.routers.nodered.service=nodered"
-      - "traefik.http.routers.nodered.tls=true"
-      - "traefik.http.routers.nodered.tls.certresolver=letsencrypt"
-      - "traefik.http.services.nodered.loadbalancer.server.port=1880"
-      # Optional: Add basic auth protection
-      - "traefik.http.routers.nodered.middlewares=nodered-auth"
-      - "traefik.http.middlewares.nodered-auth.basicauth.users=${TRAEFIK_AUTH}"
-    networks:
-      - traefik  # Add traefik network
-
-  zigbee2mqtt:
-    container_name: zigbee2mqtt
-    restart: unless-stopped
-    image: koenkk/zigbee2mqtt
-    volumes:
-      - zigbee2mqtt:/app/data
-      - /run/udev:/run/udev:ro
-    ports:
-      - "8080:8080"
-    env_file:
-      - stack.env
-    # devices:
-    #  - /dev/ttyUSB0:/dev/ttyUSB1
-
-  zwave-js-ui:
-    container_name: zwave-js-ui
-    image: zwavejs/zwave-js-ui:latest
-    restart: unless-stopped
-    tty: true
-    stop_signal: SIGINT
-    env_file:
-      - stack.env
-      # devices:
-      # Do not use /dev/ttyUSBX serial devices, as those mappings can change over time.
-      # Instead, use the /dev/serial/by-id/X serial device for your Z-Wave stick.
-      # - '/dev/serial/by-id/usb-Zooz_800_Z-Wave_Stick_533D054242-if00:/dev/zwave'
-      # run this command: ls -l /dev/serial/by-id/*
-    volumes:
-      - zwavejsui:/usr/src/app/store
-    ports:
-      - "8091:8091" # port for web interface
-
-  influxdb:
-    container_name: influxdb
-    image: influxdb:2
-    restart: unless-stopped
-    volumes:
-      - influxdb-data:/var/lib/influxdb2
-      - influxdb-config:/etc/influxdb2
-    env_file:
-      - stack.env
-    ports:
-      - "8086:8086"
+    home-assistant:
+        image: ghcr.io/home-assistant/home-assistant:2026.9.4
+        container_name: home-assistant
+        restart: always
+        network_mode: host
+        environment:
+            - TZ=Europe/Moscow
+        volumes:
+            - home-assistant-config:/config
 
 volumes:
-  home-assistant:
-  node-red:
-  zigbee2mqtt:
-  zwavejsui:
-  mosquitto:
-  influxdb-data:
-  influxdb-config:
+    home-assistant-config:
+        name: home-assistant-config
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: '/mnt/home-assistant'
