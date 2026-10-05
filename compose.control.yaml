@@ -12,8 +12,6 @@ services:
       - portainer_data:/data
     environment:
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    networks:
-      - traefik
     labels:
       - "com.docker.desktop.extension.icon=https://raw.githubusercontent.com/alexzedim/core/refs/heads/master/icons/cmnw-logo.png"
       - "io.portainer.server=true"
@@ -23,7 +21,3 @@ services:
 
 volumes:
   portainer_data:
-
-networks:
-  traefik:
-    external: true
