@@ -29,7 +29,7 @@ GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compo
 - **vendor bulbs + smart-hub** (redacted) — `vendor-cloud-integration` (dzerik): cloud-only via vendor ID OAuth (the vendor API is private; no local/Matter path for vendor's own devices — smart-hub's Matter/Zigbee hub works third-party-in only).
 - **robot vacuum vacuum** (`robot-vacuum`, redacted) — `vacuum-integration` (Tasshack), local control.
 
-The pre-2026-10-05 six-service smart-home template (mosquitto, node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never deployed and is deleted — it lives in git history.
+The pre-2026-10-05 six-service smart-home template (mosquitto, node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never deployed and is deleted — it lives in git history. Deployed as a Portainer **Repository stack** (public GitHub `alexzedim/core`, master, compose path `compose.home.yaml`); its env (`TZ`) comes from `../envs/home/.stack.env` → Portainer stack env — the repo is public, so no env values are ever committed to it.
 
 ### Shared External Network: `cmnw`
 
