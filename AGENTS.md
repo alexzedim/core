@@ -21,11 +21,19 @@ GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compo
 - **`cmnw.me` / `cmnw.xyz`** — Cloudflare Origin certificates (issued in the CF dashboard, valid until 2040-12-28), imported into the panel as custom certificates. A switch to panel-managed ACME wildcards via Cloudflare DNS-01 was attempted at cutover and is currently **blocked by a Cloudflare anomaly**: TXT records created at `_acme-challenge.<domain>` exist in the API and bump the zone serial but never become visible via public recursion (any other name publishes instantly; direct queries to Cloudflare auth NS time out). Two managed wildcard certs (`cmnw.me-wildcard`, `cmnw.xyz-wildcard`) sit parked in the panel with the CF DNS provider configured — retry the switch by re-assigning the me/xyz hosts to them once `_acme-challenge` TXTs serve publicly (test: create a TXT, `nslookup -type=TXT _acme-challenge.cmnw.me 8.8.8.8`). NB: switch ALL hosts of a domain group at once — Caddy skips auto-management for names already covered by a loaded cert, so partial switches never issue; panel DNS Resolvers must stay set (1.0.0.1/208.67.222.222/9.9.9.9) or the propagation check queries auth NS directly and hangs. Both domains are orange-clouded through Cloudflare.
 - **`cmnw.ru`** — issued and auto-renewed by **Selectel Certificate Manager** (Let's Encrypt, DNS-01 runs automatically because the zone is hosted on Selectel DNS, delegated to `a/b/c/d.ns.selectel.ru`). Delivery into the panel is automated by the **`cmnw-cert-sync`** sidecar (built from `cert-sync/` → `ghcr.io/alexzedim/cert-sync` via `.github/workflows/build-cert-sync.yml`, local-first). **The CM API does not accept static API keys** (the panel's «API-ключи» return 401) — it requires a Keystone project token: the sidecar authenticates as the Selectel service user `cert-sync` (role `member` on project `cmnw`, IAM → Сервисные пользователи; no narrower role covers Certificate Manager) via `POST https://cloud.api.selcloud.ru/identity/v3/auth/tokens` and uses the 24 h `X-Subject-Token` as `X-Auth-Token` for `GET .../certificate-manager/v1/cert/{cert_id}/ca_chain` and `.../private_key` (raw PEM). It then upserts the cert via the panel REST API (`POST/PUT /api/v1/certificates`, Bearer token from the panel's API tokens). Selectel is **not** among the panel's DNS-01 providers — that is why issuance stays at Selectel CM and only delivery is synced. The wildcard cert `*.cmnw.ru`+apex (`cmnw-ru-wildcard`, ordered 2026-10-03) covers the LAN-only `oracle-*.cmnw.ru` vhosts; the older apex-only cert (`cmnw`) stays valid until 2026-11-19. Expiry warnings land in `docker logs cmnw-cert-sync`.
 
+### Smart home — Home Assistant (single service)
+
+`compose.home.yaml` is **Home Assistant only** (`ghcr.io/home-assistant/home-assistant`, version-pinned) with `network_mode: host` — required for mDNS discovery (smart speaker local mode, robot vacuum local control); it binds **8123 directly on the host** and stays **LAN-only** (`http://128.0.0.255:8123`). No privileged mode, no MQTT/Zigbee/Z-Wave sidecars — all devices are Wi-Fi/cloud. Config lives in the `home-assistant-config` volume (`/mnt/home-assistant`; no chown needed, the container runs as root). Device integrations are HACS custom components (installed into `/config/custom_components`, not tracked in this repo):
+
+- **smart speaker** (speaker `smart-speaker`, redacted) — `speaker-integration` (AlexxIT): media_player + TTS, QR-code login, local mode via mDNS.
+- **vendor bulbs + smart-hub** (redacted) — `vendor-cloud-integration` (dzerik): cloud-only via vendor ID OAuth (the vendor API is private; no local/Matter path for vendor's own devices — smart-hub's Matter/Zigbee hub works third-party-in only).
+- **robot vacuum vacuum** (`robot-vacuum`, redacted) — `vacuum-integration` (Tasshack), local control.
+
+The pre-2026-10-05 six-service smart-home template (mosquitto, node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never deployed and is deleted — it lives in git history.
+
 ### Shared External Network: `cmnw`
 
 Multiple stacks join a pre-created external network named `cmnw` so services can reach each other across compose files. If this network doesn't exist yet, create it: `docker network create cmnw`.
-
-The `traefik` external network referenced by `compose.home.yaml` (node-red labels) and `compose.control.yaml` (portainer) is a legacy remnant — no Traefik stack exists in this repo. These services will fail to start if that network doesn't exist; create it if needed or remove the references.
 
 ### Volume Bind Mounts
 
@@ -41,6 +49,7 @@ Several named volumes bind-mount to host paths under `/mnt/`:
 | `caddy-logs` | `/mnt/caddy/logs` | routing |
 | `caddy-manager-data` | `/mnt/caddy-manager` | routing — panel SQLite, source of truth, **back this up** |
 | `loki` | `/mnt/loki` | analytics |
+| `home-assistant-config` | `/mnt/home-assistant` | home |
 
 These host directories must exist before `up -d` or the volume will fail to mount, **and ownership must match the container user** (`/mnt/caddy*` → uid 10000 for the panel's caddy image, `/mnt/caddy-manager` → uid 10001, like `/mnt/loki` → 10001) — otherwise Caddy ACME fails with `mkdir /data/caddy: permission denied`:
 
@@ -112,13 +121,13 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 | `compose.storage.yaml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
 | `compose.routing.yaml` | Caddy (fuomag9 panel image), caddy-proxy-manager (web UI), docker-socket-proxy, l4-port-manager, cert-sync | `edge`, `cmnw`, `routing-internal`, `socket-proxy` |
 | `compose.analytics.yaml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
-| `compose.home.yaml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB | `traefik` (ext) |
+| `compose.home.yaml` | Home Assistant 2026.9.4 (LAN-only :8123, mDNS discovery) | `host` |
 | `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
 | `compose.gitlab.yaml` | GitLab CE + gitlab-ssh (socat relay, host `:2222` → `gitlab:22`) | `cmnw` |
 | `compose.oracle.yaml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
 | `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
 | `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
-| `compose.control.yaml` | Portainer | `traefik` (ext) |
+| `compose.control.yaml` | Portainer | default |
 | `compose.ai-local.yaml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
 
 ---
@@ -137,7 +146,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 
 ### Intentional Exceptions
 
-- **Home Assistant:** `network_mode: host` + `privileged: true` — required for hardware device discovery and integrations
+- **Home Assistant:** `network_mode: host` — mDNS discovery on the LAN (smart speaker local mode, robot vacuum local); binds 8123 directly, LAN-only
 - **docker-socket-proxy (routing):** mounts `/var/run/docker.sock:ro` behind a restricted API proxy — the panel's only window onto Docker
 - **Portainer:** mounts `/var/run/docker.sock` — needed for Docker management
 - **GitHub Runners:** mount `/var/run/docker.sock` — Docker-in-Docker builds
