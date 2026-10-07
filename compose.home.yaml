@@ -2,18 +2,19 @@ name: 'home'
 
 # Home Assistant only. The old 6-service smart-home template (mosquitto,
 # node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never
-# deployed and is gone (2026-10-05): all current devices are Wi-Fi/cloud
-# (vendor bulbs + smart-hub, smart speaker, robot vacuum vacuum) — no Zigbee/Z-Wave
-# dongles, no MQTT devices.
+# deployed and is gone (2026-10-05): all current devices are Wi-Fi/cloud —
+# no Zigbee/Z-Wave dongles, no MQTT devices. Device specifics (vendors,
+# models, hostnames, IPs) are intentionally not committed to this public
+# repo.
 #
-# host network is required for mDNS discovery (smart speaker local mode,
-# robot vacuum local control) and binds 8123 directly on the host. LAN-only:
+# host network is required for mDNS discovery and local control of LAN
+# devices; it binds 8123 directly on the host. LAN-only:
 # http://128.0.0.255:8123 — publish through the Caddy panel later if ever
 # needed. No privileged: no USB/Bluetooth hardware is passed through.
 #
-# Integrations live in HACS (none in core): speaker-integration (AlexxIT) for the
-# smart speaker, vendor-cloud-integration (dzerik) for vendor bulbs + smart-hub (cloud-only
-# via vendor ID OAuth), vacuum-integration (Tasshack) for the robot vacuum.
+# Integrations live in HACS (none tracked in core): a smart speaker
+# (media_player + TTS, mDNS local mode), smart bulbs + hub via a cloud-only
+# vendor integration, and a locally controlled robot vacuum.
 
 services:
     home-assistant:
