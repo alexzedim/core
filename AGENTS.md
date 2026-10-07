@@ -27,6 +27,8 @@ GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compo
 
 The pre-2026-10-05 six-service smart-home template (mosquitto, node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never deployed and is deleted — it lives in git history. Deployed as a Portainer **Repository stack** (public GitHub `alexzedim/core`, master, compose path `compose.home.yaml`); its env (`TZ`) comes from `../envs/home/.stack.env` → Portainer stack env — the repo is public, so no env values are ever committed to it.
 
+HA is also reachable at `https://home.cmnw.ru` (panel proxy host, wildcard cert, websocket on, geoblock fail_closed allowing the LAN `128.0.0.0/16` + LAN v6 prefix + the voice-assistant cloud's published CIDRs). `external_url`/`internal_url` are set in HA. NB: **HA 2026.9+ ignores `http:` YAML** (migrated to the store on first boot) — reverse-proxy settings (`use_x_forwarded_for`, `trusted_proxies`) live in `/config/.storage/http`; edit that file only while the container is stopped. Backups: HA-native weekly schedule (keep 4 copies → `/mnt/home-assistant/backups`) plus a host cron copying the newest `.tar` to `/root/backups/`. Updates: bump the image tag in `compose.home.yaml`, push, "Update the stack" in Portainer.
+
 ### Shared External Network: `cmnw`
 
 Multiple stacks join a pre-created external network named `cmnw` so services can reach each other across compose files. If this network doesn't exist yet, create it: `docker network create cmnw`.
