@@ -5,7 +5,7 @@
 
   <h1>CORE | CMNW</h1>
 
-  <p>Infrastructure-as-code for a self-hosted server running containerized services across storage, routing, analytics, home automation, AI and CI/CD — orchestrated with Docker Compose behind an Nginx reverse proxy.</p>
+  <p>Infrastructure-as-code for a self-hosted server running containerized services across storage, routing, analytics, home automation, AI and CI/CD — orchestrated with Docker Compose behind a Caddy reverse proxy.</p>
 </div>
 
 ---
@@ -36,7 +36,7 @@
 <div align="center">
 <table align="center">
 <tr align="center">
-    <td valign="bottom"><img src="./icons/nginx.svg" alt="Nginx logo" width="48"/><br/>Nginx</td>
+    <td valign="bottom"><img src="./icons/caddy.svg" alt="Caddy logo" width="48"/><br/>Caddy</td>
     <td valign="bottom"><img src="./icons/adguard.svg" alt="AdGuard logo" width="48"/><br/>AdGuard</td>
 </tr>
 </table>
@@ -55,7 +55,6 @@
     <td valign="bottom"><img src="./icons/redis.svg" alt="Redis logo" width="48"/><br/>Redis</td>
     <td valign="bottom"><img src="./icons/rabbitmq.svg" alt="RabbitMQ logo" width="48"/><br/>RabbitMQ</td>
     <td valign="bottom"><img src="./icons/minio.svg" alt="MinIO logo" width="48"/><br/>MinIO</td>
-    <td valign="bottom"><img src="./icons/influxdb.svg" alt="InfluxDB logo" width="48"/><br/>InfluxDB</td>
 </tr>
 </table>
 </div>
@@ -84,10 +83,6 @@
 <table align="center">
 <tr align="center">
     <td valign="bottom"><img src="./icons/homeassistant.svg" alt="Home Assistant logo" width="48"/><br/>Home Assistant</td>
-    <td valign="bottom"><img src="./icons/nodered.svg" alt="Node-RED logo" width="48"/><br/>Node-RED</td>
-    <td valign="bottom"><img src="./icons/zigbee.svg" alt="Zigbee2MQTT logo" width="48"/><br/>Zigbee2MQTT</td>
-    <td valign="bottom"><img src="./icons/zwave-js.svg" alt="Z-Wave JS UI logo" width="48"/><br/>Z-Wave JS UI</td>
-    <td valign="bottom"><img src="./icons/mqtt.svg" alt="Mosquitto logo" width="48"/><br/>Mosquitto</td>
 </tr>
 </table>
 </div>
@@ -146,15 +141,15 @@
 | Stack | Services | Networks |
 |-------|----------|----------|
 | `compose.storage.yaml` | PostgreSQL 17.4, Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB) | `storage-network`, `cmnw` |
-| `compose.routing.yaml` | Nginx 1.27, Nginx-UI, Nginx Prometheus Exporter | `edge`, `cmnw` |
-| `compose.analytics.yaml` | Prometheus, Promtail, Loki 3.6.3, Grafana, Node Exporter, Postgres Exporter | `loki`, `cmnw` |
-| `compose.home.yaml` | Home Assistant, Mosquitto, Node-RED, Zigbee2MQTT, Z-Wave JS UI, InfluxDB 2 | `host` (HA), `traefik` (ext) |
-| `compose.git.yaml` | 5× GitHub Actions runners, docker-prune janitor | `runner-network` |
-| `compose.gitlab.yaml` | GitLab CE 19.0.1 | `cmnw` |
-| `compose.oracle.yaml` | 6× vpn-oracle AdGuard VPN gateways + `oracle` / `-1d` / `-2bd` / `-3s` / `-4qr` / `-5se` | `oraculum`, `cmnw` |
+| `compose.routing.yaml` | Caddy (panel build), caddy-proxy-manager, docker-socket-proxy, l4-port-manager, cert-sync | `edge`, `cmnw`, `routing-internal`, `socket-proxy` |
+| `compose.analytics.yaml` | Prometheus, Promtail, Loki 3.6.3, Grafana, Postgres Exporter | `loki`, `cmnw` |
+| `compose.home.yaml` | Home Assistant 2026.9.4 (LAN-only :8123, host network for mDNS) | `host` |
+| `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
+| `compose.gitlab.yaml` | GitLab CE 19.0.1 + gitlab-ssh socat relay (host :2222) | `cmnw` |
+| `compose.oracle.yaml` | 4× vpn-oracle AdGuard VPN gateways + `oracle` / `-1d` / `-2bd` / `-3s` | `oraculum`, `cmnw` (ext) |
 | `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, LightRAG | `oraculum` |
-| `compose.ai.yaml` | GitHub MCP, Grafana MCP, Open WebUI | `cmnw` |
-| `compose.control.yaml` | Portainer CE | `traefik` (ext) |
+| `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
+| `compose.control.yaml` | Portainer CE | default |
 | `compose.ai-local.yaml` | Ollama + Open WebUI (NVIDIA GPU passthrough) | `ai-local-network` |
 
 <div align="center">
@@ -165,11 +160,11 @@
 
 ## ✨ Highlights
 
-- **Multi-domain TLS routing** — SSL-terminated reverse proxy serving `cmnw.me`, `cmnw.xyz`, `cmnw.ru`
+- **Multi-domain TLS routing** — Caddy (HTTP/3/QUIC) behind caddy-proxy-manager serving `cmnw.me`, `cmnw.xyz`, `cmnw.ru`
 - **Full observability stack** — Prometheus metrics, Grafana dashboards, Loki log aggregation with 30-day retention
-- **Smart home automation** — Home Assistant hub with Zigbee and Z-Wave device meshes over MQTT
+- **Smart home automation** — single-service Home Assistant on the host network (LAN-only) driving Wi-Fi/cloud devices via HACS integrations
 - **Graph-RAG platform** — LightRAG (private fork) with graph + vectors in PostgreSQL/pgvector, inference routed via OpenRouter
-- **Egress VPN fleet** — six AdGuard VPN gateways powering the oracle farm
+- **Egress VPN fleet** — four AdGuard VPN gateways powering the oracle farm
 - **CI/CD pipeline** — self-hosted GitHub Actions runners building the stack's images
 - **Infrastructure as code** — every service defined in version-controlled Docker Compose files, deployed via Portainer
 
@@ -178,23 +173,26 @@
 ```
 core/
 ├── compose.storage.yaml      # PostgreSQL, Redis, MinIO, RabbitMQ, pgvector
-├── compose.routing.yaml      # Nginx, Nginx-UI, metrics exporter
+├── compose.routing.yaml      # Caddy, caddy-proxy-manager, cert-sync, socket proxy
 ├── compose.analytics.yaml    # Prometheus, Grafana, Loki, Promtail
-├── compose.home.yaml         # Home Assistant, Node-RED, Zigbee2MQTT, Z-Wave, InfluxDB
+├── compose.home.yaml         # Home Assistant (single service, LAN-only)
 ├── compose.git.yaml          # GitHub Actions runners (5×), docker-prune
 ├── compose.gitlab.yaml       # GitLab CE
 ├── compose.oracle.yaml       # AdGuard VPN gateways + oracle apps
 ├── compose.oraculum.yaml     # indexator, oracular, archivum, gateway, LightRAG
-├── compose.ai.yaml           # GitHub MCP, Grafana MCP, Open WebUI
+├── compose.ai.yaml           # GitHub MCP, Grafana MCP
 ├── compose.control.yaml      # Portainer
 ├── compose.ai-local.yaml     # Ollama + Open WebUI (GPU passthrough)
 ├── compose.example.yaml      # template / documentation
-├── nginx/                          # reference nginx configs
-├── prometheus/                     # reference prometheus config
-├── loki/                           # reference loki config
-├── mosquitto/                      # mosquitto config
-├── icons/                          # README icon assets
-└── images/                         # README screenshots
+├── .github/workflows         # CI: cert-sync + caddy-panel image builds
+├── cert-sync/                # Selectel CM → panel certificate delivery
+├── caddy-panel/              # patch build of caddy-proxy-manager images
+├── prometheus/               # reference prometheus config
+├── loki/                     # reference loki config
+├── mosquitto/                # legacy reference config
+├── qdrant/                   # legacy reference config
+├── icons/                    # README icon assets
+└── images/                   # README screenshots
 ```
 
 ---

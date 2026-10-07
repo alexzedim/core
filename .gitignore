@@ -8,14 +8,8 @@ stack.env
 .kilocode
 .kilo
 
-# Traefik certificates (keep private)
-/traefik/certs/*
-!/traefik/certs/.gitkeep
-
-# Nginx certificates and authentication (keep private)
-/nginx/.certs/*
-!/nginx/.certs/.gitkeep
-/nginx/.htpasswd
+# Legacy local leftovers (nginx era retired 2026-10-03)
+/nginx/
 
 # Docker data
 /volumes
