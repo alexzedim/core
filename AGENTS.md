@@ -23,11 +23,7 @@ GitLab SSH runs on host port `2222` via the `gitlab-ssh` socat sidecar in `compo
 
 ### Smart home — Home Assistant (single service)
 
-`compose.home.yaml` is **Home Assistant only** (`ghcr.io/home-assistant/home-assistant`, version-pinned) with `network_mode: host` — required for mDNS discovery (smart speaker local mode, robot vacuum local control); it binds **8123 directly on the host** and stays **LAN-only** (`http://128.0.0.255:8123`). No privileged mode, no MQTT/Zigbee/Z-Wave sidecars — all devices are Wi-Fi/cloud. Config lives in the `home-assistant-config` volume (`/mnt/home-assistant`; no chown needed, the container runs as root). Device integrations are HACS custom components (installed into `/config/custom_components`, not tracked in this repo):
-
-- **smart speaker** (speaker `smart-speaker`, redacted) — `speaker-integration` (AlexxIT): media_player + TTS, QR-code login, local mode via mDNS.
-- **vendor bulbs + smart-hub** (redacted) — `vendor-cloud-integration` (dzerik): cloud-only via vendor ID OAuth (the vendor API is private; no local/Matter path for vendor's own devices — smart-hub's Matter/Zigbee hub works third-party-in only).
-- **robot vacuum vacuum** (`robot-vacuum`, redacted) — `vacuum-integration` (Tasshack), local control.
+`compose.home.yaml` is **Home Assistant only** (`ghcr.io/home-assistant/home-assistant`, version-pinned) with `network_mode: host` — required for mDNS discovery and local control of LAN devices; it binds **8123 directly on the host** and stays **LAN-only** (`http://128.0.0.255:8123`). No privileged mode, no MQTT/Zigbee/Z-Wave sidecars — all devices are Wi-Fi/cloud. Config lives in the `home-assistant-config` volume (`/mnt/home-assistant`; no chown needed, the container runs as root). Device integrations are HACS custom components (installed into `/config/custom_components`, not tracked in this repo): a smart speaker (media_player + TTS, QR-code login, mDNS local mode), smart bulbs + hub (cloud-only vendor OAuth — no local/Matter path), and a robot vacuum (local control). Device specifics (vendors, models, hostnames, LAN IPs) are intentionally **not** committed to this public repo — keep it that way.
 
 The pre-2026-10-05 six-service smart-home template (mosquitto, node-red, zigbee2mqtt, zwave-js-ui, influxdb, traefik labels) was never deployed and is deleted — it lives in git history. Deployed as a Portainer **Repository stack** (public GitHub `alexzedim/core`, master, compose path `compose.home.yaml`); its env (`TZ`) comes from `../envs/home/.stack.env` → Portainer stack env — the repo is public, so no env values are ever committed to it.
 
@@ -146,7 +142,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 
 ### Intentional Exceptions
 
-- **Home Assistant:** `network_mode: host` — mDNS discovery on the LAN (smart speaker local mode, robot vacuum local); binds 8123 directly, LAN-only
+- **Home Assistant:** `network_mode: host` — mDNS discovery and local device control on the LAN; binds 8123 directly, LAN-only
 - **docker-socket-proxy (routing):** mounts `/var/run/docker.sock:ro` behind a restricted API proxy — the panel's only window onto Docker
 - **Portainer:** mounts `/var/run/docker.sock` — needed for Docker management
 - **GitHub Runners:** mount `/var/run/docker.sock` — Docker-in-Docker builds
