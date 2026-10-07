@@ -9,9 +9,6 @@ on:
 
 jobs:
   build:
-    # Self-hosted runner on core.cmnw — the image lands in the host Docker
-    # daemon before the push; deploys use the local copy (pull_policy:
-    # if_not_present in compose.routing.yaml).
     runs-on: [self-hosted]
     permissions:
       contents: read
