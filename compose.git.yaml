@@ -196,7 +196,7 @@ services:
         else
           gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock
           sed -i 's/^concurrent = 1$/concurrent = 2/' /etc/gitlab-runner/config.toml
-          sed -i 's/^\[runners\.docker\]$/[runners.docker]\n    network = "cmnw"/' /etc/gitlab-runner/config.toml
+          sed -i '/^\s*\[runners\.docker\]\s*$/a network = "cmnw"' /etc/gitlab-runner/config.toml
         fi
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
@@ -224,7 +224,7 @@ services:
         else
           gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock
           sed -i 's/^concurrent = 1$/concurrent = 2/' /etc/gitlab-runner/config.toml
-          sed -i 's/^\[runners\.docker\]$/[runners.docker]\n    network = "cmnw"/' /etc/gitlab-runner/config.toml
+          sed -i '/^\s*\[runners\.docker\]\s*$/a network = "cmnw"' /etc/gitlab-runner/config.toml
         fi
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
