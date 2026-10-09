@@ -181,11 +181,12 @@ services:
     image: gitlab/gitlab-runner:alpine-v19.0.1
     container_name: gitlab-runner-I
     restart: always
+    entrypoint:
+      - sh
+      - -c
     environment:
       GITLAB_RUNNER_TOKEN: ${GITLAB_RUNNER_TOKEN}
     command:
-      - sh
-      - -c
       - |
         if [ -s /etc/gitlab-runner/config.toml ]; then
           echo "config.toml cached, skipping register"
@@ -209,11 +210,12 @@ services:
     image: gitlab/gitlab-runner:alpine-v19.0.1
     container_name: gitlab-runner-II
     restart: always
+    entrypoint:
+      - sh
+      - -c
     environment:
       GITLAB_RUNNER_TOKEN: ${GITLAB_RUNNER_TOKEN}
     command:
-      - sh
-      - -c
       - |
         if [ -s /etc/gitlab-runner/config.toml ]; then
           echo "config.toml cached, skipping register"
