@@ -1,11 +1,12 @@
 name: build-caddy-panel
 
-# Patch-build of fuomag9/caddy-proxy-manager with the Selectel DNS provider
-# added (caddy-dns/selectel module + panel provider registry entry). The
-# upstream is cloned at a pinned tag and patched by caddy-panel/apply-selectel.mjs
-# — no fork to maintain, rebasing = bump UPSTREAM_TAG below (and re-apply if
-# anchors drift). Images land in the host daemon via the local runner before
-# the GHCR push (local-first deploys).
+# Patch-build of caddy-proxy-manager with the Selectel DNS provider added
+# (caddy-dns/selectel module + panel provider registry entry). Upstream lives
+# at ingres-si/ingressi (formerly fuomag9/caddy-proxy-manager — GitHub
+# redirects the old name). The upstream is cloned at a pinned tag and patched
+# by caddy-panel/apply-selectel.cjs — no fork to maintain, rebasing = bump
+# UPSTREAM_TAG below (and re-apply if anchors drift). Images land in the host
+# daemon via the local runner before the GHCR push (local-first deploys).
 
 on:
   push:
@@ -15,13 +16,13 @@ on:
   workflow_dispatch:
     inputs:
       upstream_tag:
-        description: 'fuomag9/caddy-proxy-manager tag to build'
+        description: 'ingres-si/ingressi tag to build'
         required: false
         default: 'v1.13.3'
 
 env:
   UPSTREAM_TAG: ${{ github.event.inputs.upstream_tag || 'v1.13.3' }}
-  UPSTREAM_REPO: https://github.com/fuomag9/caddy-proxy-manager
+  UPSTREAM_REPO: https://github.com/ingres-si/ingressi
   IMAGE_TAG: 1.13.3-selectel
 
 jobs:

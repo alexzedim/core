@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Patch fuomag9/caddy-proxy-manager (pinned tag) to add the Selectel DNS
+ * Patch caddy-proxy-manager (pinned tag) to add the Selectel DNS
  * provider (github.com/caddy-dns/selectel):
  *   1. docker/caddy/go.mod   — pinned module require
  *   2. docker/caddy/build.sh — xcaddy --with entry
  *   3. src/lib/dns-providers.ts — panel provider registry entry
+ *   4. docker/caddy/Dockerfile — builder GOPROXY (see the patch below)
  *
  * Run from the upstream repo root:  node apply-selectel.cjs v1.13.3
  * Idempotent: skips parts that are already applied. CommonJS — the
@@ -64,6 +65,18 @@ patch(
   "src/lib/dns-providers.ts",
   "];\n\n/**\n * Full provider registry.",
   entry + "];\n\n/**\n * Full provider registry."
+);
+
+// 4. Dockerfile — route the builder's Go module fetches away from
+//    storage.googleapis.com: the runner's docker bridge is IPv4-only and
+//    IPv4 egress to Google storage gets connection-reset (RU throttling),
+//    while the host's IPv6 path is fine. goproxy.cn serves the module zips
+//    and tunnels checksum-db (sum.golang.org) verification through itself;
+//    direct→github.com covers anything the mirror lacks.
+patch(
+  "docker/caddy/Dockerfile",
+  "RUN sh ./update-compatibility-pins.sh",
+  "ENV GOPROXY=https://goproxy.cn,direct\nRUN sh ./update-compatibility-pins.sh"
 );
 
 console.log("selectel patch applied against " + tag);
