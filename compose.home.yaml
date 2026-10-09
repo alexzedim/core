@@ -22,10 +22,17 @@ services:
         container_name: home-assistant
         restart: always
         network_mode: host
+        # The vendor cloud gateway serves a private RU CA
+        # chain the image does not trust — mount the vendor CA bundle (LF PEM at /mnt/home-assistant/nuc_official.pem) and fold
+        # it into the container CA stores before handing off to /init.
+        # $$ escapes docker-compose interpolation; the wrapper is idempotent
+        # and re-applies after every image update.
+        entrypoint: /bin/sh -c "update-ca-certificates >/dev/null 2>&1; C=$$(python3 -c 'import certifi; print(certifi.where())' 2>/dev/null); if [ -n \"$$C\" ] && ! grep -q 'Russian Trusted Root CA' \"$$C\" 2>/dev/null; then cat /usr/local/share/ca-certificates/nuc_official.pem >> \"$$C\"; fi; exec /init"
         environment:
             - TZ=${TZ}
         volumes:
             - home-assistant-config:/config
+            - /mnt/home-assistant/nuc_official.pem:/usr/local/share/ca-certificates/nuc_official.pem:ro
 
 volumes:
     home-assistant-config:
