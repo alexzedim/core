@@ -31,7 +31,8 @@ name: 'network'
 # oracle_oracle-*-geo). vpn-oracle-5se-adguard is the only project-scoped
 # volume: that gateway was recreated fresh and re-logs-in on first boot.
 #
-# Deployed via Portainer (stack 'network'); envs synced with
+# Deployed via Portainer as a Repository stack (this public repo, master,
+# compose path compose.network.yaml); envs synced with
 # ../envs/network/.stack.env. Oracle ports (${ORACLE_*}) keep inline defaults.
 
 services:
