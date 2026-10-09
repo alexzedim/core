@@ -122,13 +122,14 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 | `compose.routing.yaml` | Caddy (fuomag9 panel image), caddy-proxy-manager (web UI), docker-socket-proxy, l4-port-manager, cert-sync | `edge`, `cmnw`, `routing-internal`, `socket-proxy` |
 | `compose.analytics.yaml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
 | `compose.home.yaml` | Home Assistant 2026.9.4 (LAN-only :8123, mDNS discovery) | `host` |
-| `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
+| `compose.git.yaml` | 6× GitHub Actions runners (`gha-cmnw-1..3`, `gha-core-1`, `gha-oraculum-1..2`), 2× GitLab runner managers (`gitlab-runner-I/II`, instance record "core-gitlab-runner", register `http://gitlab` on `cmnw`), docker-prune janitor | `runner-network`, `cmnw` (ext) |
 | `compose.gitlab.yaml` | GitLab CE + gitlab-ssh (socat relay, host `:2222` → `gitlab:22`) | `cmnw` |
 | `compose.oracle.yaml` | 4× vpn-oracle (AdGuard VPN gateways) + oracle / oracle-1d / oracle-2bd / oracle-3s | `oraculum`, `cmnw` (ext) |
 | `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, lightrag | `oraculum` |
 | `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
 | `compose.control.yaml` | Portainer | default |
 | `compose.ai-local.yaml` | Ollama + Open WebUI with NVIDIA GPU passthrough | `ai-local-network` |
+| `compose.network.yaml` | AdGuard Home — LAN DNS: rewrites всех `*.cmnw` имён устройств, DNS1 в DHCP Primary = 128.0.0.255; web UI `128.0.0.255:3300`; upstream = роутер (128.0.0.1) | default |
 
 ---
 
