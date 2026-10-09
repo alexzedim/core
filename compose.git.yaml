@@ -1,4 +1,12 @@
 name: "git"
+# GitLab CI runners: two manager containers under one instance runner record
+# ("core-gitlab-runner"). Each boots with `gitlab-runner register` using
+# GITLAB_RUNNER_TOKEN (glrt- token, shown once in Admin -> CI/CD -> Runners;
+# rotation = new token in stack env + redeploy). Registration URL is
+# http://gitlab — container-to-container over the shared external `cmnw`
+# network, no DNS or web round-trip; job containers join `cmnw` as well and
+# get the host docker socket for image builds. Token lives in stack env only
+# (never committed; .env.example keeps a blank template).
 services:
   cmnw-github-runner-I:
     image: myoung34/github-runner:latest
@@ -166,6 +174,54 @@ services:
     networks:
       - runner-network
 
+  gitlab-runner-I:
+    image: gitlab/gitlab-runner:alpine-v19.0.1
+    container_name: gitlab-runner-I
+    restart: always
+    environment:
+      GITLAB_RUNNER_TOKEN: ${GITLAB_RUNNER_TOKEN}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
+          echo "GITLAB_RUNNER_TOKEN is not set" >&2
+          exit 1
+        fi
+        gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
+        exec gitlab-runner run --working-directory=/home/gitlab-runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: gitlab-runner-template
+        target: /etc/gitlab-runner/config-template.toml
+    networks:
+      - cmnw
+
+  gitlab-runner-II:
+    image: gitlab/gitlab-runner:alpine-v19.0.1
+    container_name: gitlab-runner-II
+    restart: always
+    environment:
+      GITLAB_RUNNER_TOKEN: ${GITLAB_RUNNER_TOKEN}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
+          echo "GITLAB_RUNNER_TOKEN is not set" >&2
+          exit 1
+        fi
+        gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
+        exec gitlab-runner run --working-directory=/home/gitlab-runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: gitlab-runner-template
+        target: /etc/gitlab-runner/config-template.toml
+    networks:
+      - cmnw
+
   docker-prune:
     image: docker:28.5.0-cli
     container_name: docker-prune
@@ -201,9 +257,16 @@ configs:
       docker container prune -f --filter "until=$1"
       docker image prune -a -f --filter "until=$1"
       docker builder prune -a -f --filter "until=$1"
+  gitlab-runner-template:
+    content: |
+      concurrent = 2
+      check_interval = 3
+      log_level = "info"
 
 networks:
   runner-network:
     driver: bridge
   storage-network:
     driver: bridge
+  cmnw:
+    external: true
