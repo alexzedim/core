@@ -1,332 +1,132 @@
 name: 'oracle'
+
+# Scraper apps only. Each app joins its AdGuard VPN gateway's network
+# namespace CROSS-STACK: `network_mode: 'container:vpn-oracle-<x>'` refers to
+# the gateway service defined in compose.network.yaml (stack 'network',
+# project 'network'). Cross-stack `depends_on` is impossible, and docker pins
+# the netns at app-container creation: restarting or recreating a gateway
+# alone orphans its app (no eth0, dead DNS) until the app is recreated.
+# RULE: deploy this stack AFTER any change to the network stack; never
+# restart a vpn-oracle* container alone. netns-watch.sh (host cron,
+# /etc/cron.d/netns-watch) alerts on pair divergence.
+#
+# Volumes are project-scoped here ('oracle_' prefix real names) and shared
+# with the gateways: the -geo volumes are attached from the network side as
+# external volumes under the same real names.
+#
+# Deployed via Portainer (stack 'oracle'); envs synced with
+# ../envs/oracle/.stack.env.
+
 services:
-  vpn-oracle:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle
-    volumes:
-      - vpn-oracle-adguard:/var/lib/adguardvpn
-      - oracle-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
-    networks:
-      - oraculum
-      - cmnw
+    oracle:
+        image: ghcr.io/alexzedim/oracle:latest
+        pull_policy: if_not_present
+        container_name: oracle
+        network_mode: 'container:vpn-oracle'
+        restart: always
+        env_file:
+            - stack.env
+        shm_size: '1gb'
+        command: ['node', 'dist/apps/oracle/src/main.js']
+        environment:
+            NODE_ENV: production
+            APP_NAME: oracle
+        volumes:
+            - oracle-secrets:/app/secrets:rw
+            - oracle-geo:/var/lib/oraculum
 
-  oracle:
-    image: ghcr.io/alexzedim/oracle:latest
-    pull_policy: if_not_present
-    container_name: oracle
-    network_mode: 'service:vpn-oracle'
-    depends_on:
-      vpn-oracle:
-        condition: service_healthy
-    restart: always
-    env_file:
-      - stack.env
-    shm_size: '1gb'
-    command: ['node', 'dist/apps/oracle/src/main.js']
-    environment:
-      NODE_ENV: production
-      APP_NAME: oracle
-    volumes:
-      - oracle-secrets:/app/secrets:rw
-      - oracle-geo:/var/lib/oraculum
+    oracle-1d:
+        image: ghcr.io/alexzedim/oracle-1d:latest
+        pull_policy: if_not_present
+        container_name: oracle-1d
+        network_mode: 'container:vpn-oracle-1d'
+        restart: always
+        env_file:
+            - stack.env
+        shm_size: '1gb'
+        command: ['node', 'dist/apps/oracle-1d/src/main.js']
+        environment:
+            NODE_ENV: production
+            APP_NAME: oracle-1d
+        volumes:
+            - oracle-1d-secrets:/app/secrets:rw
+            - oracle-1d-geo:/var/lib/oraculum
 
-  vpn-oracle-1d:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle-1d
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle-1d
-    volumes:
-      - vpn-oracle-1d-adguard:/var/lib/adguardvpn
-      - oracle-1d-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_VNC_PORT:-6182}:6080'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_CDP_PORT:-9322}:9222'
-    networks:
-      - oraculum
-      - cmnw
+    oracle-2bd:
+        image: ghcr.io/alexzedim/oracle-2bd:latest
+        pull_policy: if_not_present
+        container_name: oracle-2bd
+        network_mode: 'container:vpn-oracle-2bd'
+        restart: always
+        env_file:
+            - stack.env
+        shm_size: '1gb'
+        command: ['node', 'dist/apps/oracle-2bd/src/main.js']
+        environment:
+            NODE_ENV: production
+            APP_NAME: oracle-2bd
+        volumes:
+            - oracle-2bd-secrets:/app/secrets:rw
+            - oracle-2bd-geo:/var/lib/oraculum
 
-  oracle-1d:
-    image: ghcr.io/alexzedim/oracle-1d:latest
-    pull_policy: if_not_present
-    container_name: oracle-1d
-    network_mode: 'service:vpn-oracle-1d'
-    depends_on:
-      vpn-oracle-1d:
-        condition: service_healthy
-    restart: always
-    env_file:
-      - stack.env
-    shm_size: '1gb'
-    command: ['node', 'dist/apps/oracle-1d/src/main.js']
-    environment:
-      NODE_ENV: production
-      APP_NAME: oracle-1d
-    volumes:
-      - oracle-1d-secrets:/app/secrets:rw
-      - oracle-1d-geo:/var/lib/oraculum
+    oracle-3s:
+        image: ghcr.io/alexzedim/oracle-3s:latest
+        pull_policy: if_not_present
+        container_name: oracle-3s
+        network_mode: 'container:vpn-oracle-3s'
+        restart: always
+        env_file:
+            - stack.env
+        shm_size: '1gb'
+        command: ['node', 'dist/apps/oracle-3s/src/main.js']
+        environment:
+            NODE_ENV: production
+            APP_NAME: oracle-3s
+        volumes:
+            - oracle-3s-secrets:/app/secrets:rw
+            - oracle-3s-geo:/var/lib/oraculum
 
-  vpn-oracle-2bd:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle-2bd
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle-2bd
-    volumes:
-      - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
-      - oracle-2bd-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_VNC_PORT:-6183}:6080'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_CDP_PORT:-9323}:9222'
-    networks:
-      - oraculum
-      - cmnw
+    oracle-4qr:
+        image: ghcr.io/alexzedim/oracle-4qr:latest
+        pull_policy: if_not_present
+        container_name: oracle-4qr
+        network_mode: 'container:vpn-oracle-4qr'
+        restart: always
+        env_file:
+            - stack.env
+        command: ['node', 'dist/apps/oracle-4qr/src/main.js']
+        environment:
+            APP_NAME: oracle-4qr
+        volumes:
+            - oracle-4qr-secrets:/app/secrets:rw
+            - oracle-4qr-geo:/var/lib/oraculum
 
-  oracle-2bd:
-    image: ghcr.io/alexzedim/oracle-2bd:latest
-    pull_policy: if_not_present
-    container_name: oracle-2bd
-    network_mode: 'service:vpn-oracle-2bd'
-    depends_on:
-      vpn-oracle-2bd:
-        condition: service_healthy
-    restart: always
-    env_file:
-      - stack.env
-    shm_size: '1gb'
-    command: ['node', 'dist/apps/oracle-2bd/src/main.js']
-    environment:
-      NODE_ENV: production
-      APP_NAME: oracle-2bd
-    volumes:
-      - oracle-2bd-secrets:/app/secrets:rw
-      - oracle-2bd-geo:/var/lib/oraculum
-
-  vpn-oracle-3s:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle-3s
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle-3s
-    volumes:
-      - vpn-oracle-3s-adguard:/var/lib/adguardvpn
-      - oracle-3s-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_VNC_PORT:-6184}:6080'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_CDP_PORT:-9324}:9222'
-    networks:
-      - oraculum
-      - cmnw
-
-  oracle-3s:
-    image: ghcr.io/alexzedim/oracle-3s:latest
-    pull_policy: if_not_present
-    restart: always
-    container_name: oracle-3s
-    network_mode: 'service:vpn-oracle-3s'
-    depends_on:
-      vpn-oracle-3s:
-        condition: service_healthy
-    shm_size: '1gb'
-    env_file:
-      - stack.env
-    command: ['node', 'dist/apps/oracle-3s/src/main.js']
-    environment:
-      NODE_ENV: production
-      APP_NAME: oracle-3s
-    volumes:
-      - oracle-3s-secrets:/app/secrets:rw
-      - oracle-3s-geo:/var/lib/oraculum
-
-  vpn-oracle-4qr:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle-4qr
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle-4qr
-    volumes:
-      - vpn-oracle-4qr-adguard:/var/lib/adguardvpn
-      - oracle-4qr-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_4QR_LOGIN_PORT:-6185}:3000'
-    networks:
-      - oraculum
-      - cmnw
-
-  oracle-4qr:
-    image: ghcr.io/alexzedim/oracle-4qr:latest
-    pull_policy: if_not_present
-    container_name: oracle-4qr
-    network_mode: 'service:vpn-oracle-4qr'
-    depends_on:
-      vpn-oracle-4qr:
-        condition: service_healthy
-    restart: always
-    env_file:
-      - stack.env
-    command: ['node', 'dist/apps/oracle-4qr/src/main.js']
-    environment:
-      APP_NAME: oracle-4qr
-    volumes:
-      - oracle-4qr-secrets:/app/secrets:rw
-      - oracle-4qr-geo:/var/lib/oraculum
-
-  vpn-oracle-5se:
-    image: ghcr.io/alexzedim/adguard:latest
-    pull_policy: if_not_present
-    container_name: vpn-oracle-5se
-    restart: always
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 8m
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - stack.env
-    environment:
-      APP_NAME: oracle-5se
-    volumes:
-      - vpn-oracle-5se-adguard:/var/lib/adguardvpn
-      - oracle-5se-geo:/var/lib/oraculum
-    ports:
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_LOGIN_PORT:-6186}:3000'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_SELKIES_PORT:-6187}:6080'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478/udp'
-      - '${ORACLE_BIND_IP:-128.0.0.255}:49160-49260:49160-49260/udp'
-    networks:
-      - oraculum
-      - cmnw
-
-  oracle-5se:
-    image: ghcr.io/alexzedim/oracle-5se:latest
-    pull_policy: if_not_present
-    container_name: oracle-5se
-    network_mode: 'service:vpn-oracle-5se'
-    depends_on:
-      vpn-oracle-5se:
-        condition: service_healthy
-    restart: always
-    env_file:
-      - stack.env
-    shm_size: '1gb'
-    command: ['sh', '-c', './entrypoint.sh']
-    environment:
-      APP_NAME: oracle-5se
-    volumes:
-      - oracle-5se-secrets:/app/secrets:rw
-      - oracle-5se-geo:/var/lib/oraculum
+    oracle-5se:
+        image: ghcr.io/alexzedim/oracle-5se:latest
+        pull_policy: if_not_present
+        container_name: oracle-5se
+        network_mode: 'container:vpn-oracle-5se'
+        restart: always
+        env_file:
+            - stack.env
+        shm_size: '1gb'
+        command: ['sh', '-c', './entrypoint.sh']
+        environment:
+            APP_NAME: oracle-5se
+        volumes:
+            - oracle-5se-secrets:/app/secrets:rw
+            - oracle-5se-geo:/var/lib/oraculum
 
 volumes:
-  oracle-geo:
-  oracle-1d-geo:
-  oracle-2bd-geo:
-  oracle-3s-geo:
-  oracle-4qr-geo:
-  oracle-5se-geo:
-  oracle-secrets:
-  oracle-1d-secrets:
-  oracle-2bd-secrets:
-  oracle-3s-secrets:
-  oracle-4qr-secrets:
-  oracle-5se-secrets:
-  vpn-oracle-adguard:
-  vpn-oracle-1d-adguard:
-  vpn-oracle-2bd-adguard:
-  vpn-oracle-3s-adguard:
-  vpn-oracle-4qr-adguard:
-  vpn-oracle-5se-adguard:
-
-networks:
-  oraculum:
-    driver: bridge
-  cmnw:
-    external: true
+    oracle-geo:
+    oracle-1d-geo:
+    oracle-2bd-geo:
+    oracle-3s-geo:
+    oracle-4qr-geo:
+    oracle-5se-geo:
+    oracle-secrets:
+    oracle-1d-secrets:
+    oracle-2bd-secrets:
+    oracle-3s-secrets:
+    oracle-4qr-secrets:
+    oracle-5se-secrets:
