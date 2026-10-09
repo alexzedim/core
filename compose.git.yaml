@@ -11,9 +11,9 @@ name: "git"
 # get the host docker socket for image builds. Token lives in stack env only
 # (never committed; .env.example keeps a blank template).
 services:
-  cmnw-github-runner-I:
+  gha-cmnw-1:
     image: myoung34/github-runner:latest
-    container_name: cmnw-github-runner-I
+    container_name: gha-cmnw-1
     environment:
       # Required: Your GitHub repository or organization
       REPO_URL: https://github.com/alexzedim/cmnw
@@ -24,7 +24,7 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
 
       # Optional: Runner name (defaults to hostname)
-      RUNNER_NAME: cmnw-runner-I
+      RUNNER_NAME: gha-cmnw-1
 
       # Optional: Runner labels (comma separated)
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
@@ -68,13 +68,13 @@ services:
     # security_opt:
     #    - no-new-privileges:true
 
-  cmnw-github-runner-II:
+  gha-cmnw-2:
     image: myoung34/github-runner:latest
-    container_name: cmnw-github-runner-II
+    container_name: gha-cmnw-2
     environment:
       REPO_URL: https://github.com/alexzedim/cmnw
       ACCESS_TOKEN: ${GITHUB_TOKEN}
-      RUNNER_NAME: cmnw-runner-II
+      RUNNER_NAME: gha-cmnw-2
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -94,13 +94,13 @@ services:
     networks:
       - runner-network
 
-  cmnw-github-runner-III:
+  gha-cmnw-3:
     image: myoung34/github-runner:latest
-    container_name: cmnw-github-runner-III
+    container_name: gha-cmnw-3
     environment:
       REPO_URL: https://github.com/alexzedim/cmnw
       ACCESS_TOKEN: ${GITHUB_TOKEN}
-      RUNNER_NAME: cmnw-runner-III
+      RUNNER_NAME: gha-cmnw-3
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -120,13 +120,13 @@ services:
     networks:
       - runner-network
 
-  core-github-runner:
+  gha-core-1:
     image: myoung34/github-runner:latest
-    container_name: core-github-runner
+    container_name: gha-core-1
     environment:
       REPO_URL: https://github.com/alexzedim/core
       ACCESS_TOKEN: ${GITHUB_TOKEN}
-      RUNNER_NAME: core-runner-I
+      RUNNER_NAME: gha-core-1
       RUNNER_LABELS: docker,linux,self-hosted,core
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -145,13 +145,13 @@ services:
       - runner-network
 
   # Optional: Multiple runners
-  oraculum-github-runner-I:
+  gha-oraculum-1:
     image: myoung34/github-runner:latest
-    container_name: oraculum-github-runner-I
+    container_name: gha-oraculum-1
     environment:
       REPO_URL: https://github.com/alexzedim/oraculum
       ACCESS_TOKEN: ${GITHUB_TOKEN}
-      RUNNER_NAME: oraculum-runner-I
+      RUNNER_NAME: gha-oraculum-1
       RUNNER_LABELS: docker,linux,self-hosted,oraculum
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -161,13 +161,13 @@ services:
     networks:
       - runner-network
 
-  oraculum-github-runner-II:
+  gha-oraculum-2:
     image: myoung34/github-runner:latest
-    container_name: oraculum-github-runner-II
+    container_name: gha-oraculum-2
     environment:
       REPO_URL: https://github.com/alexzedim/oraculum
       ACCESS_TOKEN: ${GITHUB_TOKEN}
-      RUNNER_NAME: oraculum-runner-II
+      RUNNER_NAME: gha-oraculum-2
       RUNNER_LABELS: docker,linux,self-hosted,oraculum
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
