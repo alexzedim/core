@@ -194,7 +194,7 @@ services:
           echo "GITLAB_RUNNER_TOKEN is not set and no cached config" >&2
           exit 1
         else
-          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
+          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --template-config /etc/gitlab-runner/config-template.toml
         fi
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
@@ -223,7 +223,7 @@ services:
           echo "GITLAB_RUNNER_TOKEN is not set and no cached config" >&2
           exit 1
         else
-          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
+          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --template-config /etc/gitlab-runner/config-template.toml
         fi
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
@@ -279,6 +279,11 @@ configs:
       concurrent = 2
       check_interval = 3
       log_level = "info"
+
+      [[runners]]
+        [runners.docker]
+          network = "cmnw"
+          volumes = ["/var/run/docker.sock:/var/run/docker.sock"]
 
 networks:
   runner-network:
