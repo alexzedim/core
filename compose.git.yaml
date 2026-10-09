@@ -1,8 +1,11 @@
 name: "git"
 # GitLab CI runners: two manager containers under one instance runner record
-# ("core-gitlab-runner"). Each boots with `gitlab-runner register` using
-# GITLAB_RUNNER_TOKEN (glrt- token, shown once in Admin -> CI/CD -> Runners;
-# rotation = new token in stack env + redeploy). Registration URL is
+# ("core-gitlab-runner"). GITLAB_RUNNER_TOKEN (glrt- token, shown once in
+# Admin -> CI/CD -> Runners) is consumed on FIRST boot only — the generated
+# config.toml is cached in a per-manager named volume and reused afterwards,
+# so the runners keep working even if the stack env loses the var (Portainer
+# rebuilds env from its own DB on UI updates). Rotation = new token in env +
+# drop the two gitlab-runner-*-config volumes + redeploy. Registration URL is
 # http://gitlab — container-to-container over the shared external `cmnw`
 # network, no DNS or web round-trip; job containers join `cmnw` as well and
 # get the host docker socket for image builds. Token lives in stack env only
@@ -184,14 +187,18 @@ services:
       - sh
       - -c
       - |
-        if [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
-          echo "GITLAB_RUNNER_TOKEN is not set" >&2
+        if [ -s /etc/gitlab-runner/config.toml ]; then
+          echo "config.toml cached, skipping register"
+        elif [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
+          echo "GITLAB_RUNNER_TOKEN is not set and no cached config" >&2
           exit 1
+        else
+          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
         fi
-        gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-I" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-I-config:/etc/gitlab-runner
     configs:
       - source: gitlab-runner-template
         target: /etc/gitlab-runner/config-template.toml
@@ -208,14 +215,18 @@ services:
       - sh
       - -c
       - |
-        if [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
-          echo "GITLAB_RUNNER_TOKEN is not set" >&2
+        if [ -s /etc/gitlab-runner/config.toml ]; then
+          echo "config.toml cached, skipping register"
+        elif [ -z "$${GITLAB_RUNNER_TOKEN}" ]; then
+          echo "GITLAB_RUNNER_TOKEN is not set and no cached config" >&2
           exit 1
+        else
+          gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
         fi
-        gitlab-runner register --non-interactive --url http://gitlab --token "$${GITLAB_RUNNER_TOKEN}" --executor docker --description "core-gitlab-runner-II" --docker-image docker:28.5.0-cli --docker-volumes /var/run/docker.sock:/var/run/docker.sock --docker-network cmnw --template-config /etc/gitlab-runner/config-template.toml
         exec gitlab-runner run --working-directory=/home/gitlab-runner
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-II-config:/etc/gitlab-runner
     configs:
       - source: gitlab-runner-template
         target: /etc/gitlab-runner/config-template.toml
@@ -249,6 +260,10 @@ volumes:
   core-runner-work:
     driver: local
   oraculum-runner-work:
+    driver: local
+  gitlab-runner-I-config:
+    driver: local
+  gitlab-runner-II-config:
     driver: local
 
 configs:
