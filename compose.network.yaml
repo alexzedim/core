@@ -1,39 +1,7 @@
-name: 'network'
-
-# AdGuard Home (LAN DNS + ad filtering) and the AdGuard VPN gateway fleet
-# (vpn-oracle*) in one stack.
-#
-# vpn-oracle* are wrappers around the official AdGuard VPN CLI (image
-# ghcr.io/alexzedim/adguard — the oraculum monorepo `adguard` app): each
-# logs in with VPN_EMAIL/VPN_PASSWORD (stack.env), connects to the location
-# stored in the `location` file of its volume and provides tun0 plus a SOCKS5
-# proxy (per-gateway, adguardvpn-cli default port 1080). The scraper apps in
-# compose.oracle.yaml join each gateway's network namespace CROSS-STACK via
-# `network_mode: 'container:vpn-oracle-<x>'` — the whole pair's traffic exits
-# through that gateway's tunnel. CONTRACT: a netns join is bound at
-# app-container creation; restarting or recreating a gateway alone orphans
-# its app (dead netns, no eth0). RULE: after ANY change to this stack, also
-# "Update the stack" for oracle; never restart a vpn-oracle* container alone.
-# netns-watch.sh (host cron, /etc/cron.d/netns-watch) alerts on divergence.
-#
-# The gateways sit on cmnw (cross-stack reachability) and on the oraculum
-# stack's network (oraculum_oraculum, external) so oraculum services can use
-# them: SOCKS5 is exposed on every gateway (one-time `adguardvpn-cli config
-# set-socks-host 0.0.0.0` + set-socks-username/password, persisted in the
-# volume; creds in ../envs/network/.stack.env). From any oraculum container:
-# socks5h://vpn-oracle-<x>:1080 egresses via that gateway's VPN location.
-#
-# Volumes: this project is 'network' but the VPN state volumes were created
-# by the former 'oracle' project — they are attached EXTERNAL under their real
-# names (oracle_vpn-oracle-*-adguard) so logins, locations and SOCKS config
-# survive the move; license device slots are preserved. The -geo volumes are
-# shared with the apps in compose.oracle.yaml (external, real names
-# oracle_oracle-*-geo). vpn-oracle-5se-adguard is the only project-scoped
-# volume: that gateway was recreated fresh and re-logs-in on first boot.
-#
-# Deployed via Portainer as a Repository stack (this public repo, master,
-# compose path compose.network.yaml); envs synced with
-# ../envs/network/.stack.env. Oracle ports (${ORACLE_*}) keep inline defaults.
+# AdGuard Home (LAN DNS 128.0.0.255:53, UI :3300 -> https://adguard.cmnw.ru)
+# + AdGuard VPN gateways (vpn-oracle*). Scraper apps in compose.oracle.yaml
+# join the gateways' netns cross-stack. Deploy this stack BEFORE oracle.
+# See AGENTS.md "AdGuard - Home + VPN fleet" for volumes/SOCKS/watchdog.
 
 services:
     adguard-home:
