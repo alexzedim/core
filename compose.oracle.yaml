@@ -1,21 +1,7 @@
-name: 'oracle'
-
-# Scraper apps only. Each app joins its AdGuard VPN gateway's network
-# namespace CROSS-STACK: `network_mode: 'container:vpn-oracle-<x>'` refers to
-# the gateway service defined in compose.network.yaml (stack 'network',
-# project 'network'). Cross-stack `depends_on` is impossible, and docker pins
-# the netns at app-container creation: restarting or recreating a gateway
-# alone orphans its app (no eth0, dead DNS) until the app is recreated.
-# RULE: deploy this stack AFTER any change to the network stack; never
-# restart a vpn-oracle* container alone. netns-watch.sh (host cron,
-# /etc/cron.d/netns-watch) alerts on pair divergence.
-#
-# Volumes are project-scoped here ('oracle_' prefix real names) and shared
-# with the gateways: the -geo volumes are attached from the network side as
-# external volumes under the same real names.
-#
-# Deployed via Portainer (stack 'oracle'); envs synced with
-# ../envs/oracle/.stack.env.
+# Scraper apps joined to the vpn-oracle* gateways' netns (gateways live in
+# compose.network.yaml, stack 'network'). Deploy this stack AFTER any change
+# to the network stack; never restart a vpn-oracle* container alone.
+# See AGENTS.md "AdGuard - Home + VPN fleet".
 
 services:
     oracle:
