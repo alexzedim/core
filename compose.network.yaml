@@ -1,0 +1,279 @@
+name: 'network'
+
+# AdGuard Home (LAN DNS + ad filtering) and the AdGuard VPN gateway fleet
+# (vpn-oracle*) in one stack.
+#
+# vpn-oracle* are wrappers around the official AdGuard VPN CLI (image
+# ghcr.io/alexzedim/adguard — the oraculum monorepo `adguard` app): each
+# logs in with VPN_EMAIL/VPN_PASSWORD (stack.env), connects to the location
+# stored in the `location` file of its volume and provides tun0 plus a SOCKS5
+# proxy (per-gateway, adguardvpn-cli default port 1080). The scraper apps in
+# compose.oracle.yaml join each gateway's network namespace CROSS-STACK via
+# `network_mode: 'container:vpn-oracle-<x>'` — the whole pair's traffic exits
+# through that gateway's tunnel. CONTRACT: a netns join is bound at
+# app-container creation; restarting or recreating a gateway alone orphans
+# its app (dead netns, no eth0). RULE: after ANY change to this stack, also
+# "Update the stack" for oracle; never restart a vpn-oracle* container alone.
+# netns-watch.sh (host cron, /etc/cron.d/netns-watch) alerts on divergence.
+#
+# The gateways sit on cmnw (cross-stack reachability) and on the oraculum
+# stack's network (oraculum_oraculum, external) so oraculum services can use
+# them: SOCKS5 is exposed on every gateway (one-time `adguardvpn-cli config
+# set-socks-host 0.0.0.0` + set-socks-username/password, persisted in the
+# volume; creds in ../envs/network/.stack.env). From any oraculum container:
+# socks5h://vpn-oracle-<x>:1080 egresses via that gateway's VPN location.
+#
+# Volumes: this project is 'network' but the VPN state volumes were created
+# by the former 'oracle' project — they are attached EXTERNAL under their real
+# names (oracle_vpn-oracle-*-adguard) so logins, locations and SOCKS config
+# survive the move; license device slots are preserved. The -geo volumes are
+# shared with the apps in compose.oracle.yaml (external, real names
+# oracle_oracle-*-geo). vpn-oracle-5se-adguard is the only project-scoped
+# volume: that gateway was recreated fresh and re-logs-in on first boot.
+#
+# Deployed via Portainer (stack 'network'); envs synced with
+# ../envs/network/.stack.env. Oracle ports (${ORACLE_*}) keep inline defaults.
+
+services:
+    adguard-home:
+        image: adguard/adguardhome:v0.107.57
+        container_name: adguard-home
+        restart: always
+        ports:
+            - '128.0.0.255:53:53/udp'
+            - '128.0.0.255:53:53/tcp'
+            - '128.0.0.255:3300:3000/tcp'
+        volumes:
+            - /mnt/adguard/conf:/opt/adguardhome/conf
+            - /mnt/adguard/work:/opt/adguardhome/work
+
+    vpn-oracle:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle
+        volumes:
+            - vpn-oracle-adguard:/var/lib/adguardvpn
+            - oracle-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
+        networks:
+            - cmnw
+            - oraculum
+
+    vpn-oracle-1d:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle-1d
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle-1d
+        volumes:
+            - vpn-oracle-1d-adguard:/var/lib/adguardvpn
+            - oracle-1d-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_VNC_PORT:-6182}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_CDP_PORT:-9322}:9222'
+        networks:
+            - cmnw
+            - oraculum
+
+    vpn-oracle-2bd:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle-2bd
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle-2bd
+        volumes:
+            - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
+            - oracle-2bd-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_VNC_PORT:-6183}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_CDP_PORT:-9323}:9222'
+        networks:
+            - cmnw
+            - oraculum
+
+    vpn-oracle-3s:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle-3s
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle-3s
+        volumes:
+            - vpn-oracle-3s-adguard:/var/lib/adguardvpn
+            - oracle-3s-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_VNC_PORT:-6184}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_CDP_PORT:-9324}:9222'
+        networks:
+            - cmnw
+            - oraculum
+
+    vpn-oracle-4qr:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle-4qr
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle-4qr
+        volumes:
+            - vpn-oracle-4qr-adguard:/var/lib/adguardvpn
+            - oracle-4qr-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_4QR_LOGIN_PORT:-6185}:3000'
+        networks:
+            - cmnw
+            - oraculum
+
+    vpn-oracle-5se:
+        image: ghcr.io/alexzedim/adguard:latest
+        pull_policy: if_not_present
+        container_name: vpn-oracle-5se
+        restart: always
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 8m
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        env_file:
+            - stack.env
+        environment:
+            APP_NAME: oracle-5se
+        volumes:
+            - vpn-oracle-5se-adguard:/var/lib/adguardvpn
+            - oracle-5se-geo:/var/lib/oraculum
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_LOGIN_PORT:-6186}:3000'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_SELKIES_PORT:-6187}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478/udp'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:49160-49260:49160-49260/udp'
+        networks:
+            - cmnw
+            - oraculum
+
+volumes:
+    vpn-oracle-adguard:
+        external: true
+        name: oracle_vpn-oracle-adguard
+    vpn-oracle-1d-adguard:
+        external: true
+        name: oracle_vpn-oracle-1d-adguard
+    vpn-oracle-2bd-adguard:
+        external: true
+        name: oracle_vpn-oracle-2bd-adguard
+    vpn-oracle-3s-adguard:
+        external: true
+        name: oracle_vpn-oracle-3s-adguard
+    vpn-oracle-4qr-adguard:
+        external: true
+        name: oracle_vpn-oracle-4qr-adguard
+    vpn-oracle-5se-adguard:
+    oracle-geo:
+        external: true
+        name: oracle_oracle-geo
+    oracle-1d-geo:
+        external: true
+        name: oracle_oracle-1d-geo
+    oracle-2bd-geo:
+        external: true
+        name: oracle_oracle-2bd-geo
+    oracle-3s-geo:
+        external: true
+        name: oracle_oracle-3s-geo
+    oracle-4qr-geo:
+        external: true
+        name: oracle_oracle-4qr-geo
+    oracle-5se-geo:
+        external: true
+        name: oracle_oracle-5se-geo
+
+networks:
+    cmnw:
+        external: true
+    oraculum:
+        external: true
+        name: oraculum_oraculum
