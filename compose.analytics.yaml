@@ -74,6 +74,7 @@ services:
       GF_PLUGIN_PUBLIC_KEY_RETRIEVAL_DISABLED: true
       GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
       GF_ANALYTICS_CHECK_FOR_UPDATES: false
+      GF_ANALYTICS_REPORTING_ENABLED: false
       GF_INSTALL_IMAGE_RENDERER_PLUGIN: false
       # Force Grafana to trust the proxy (Traefik) for HTTPS
       GF_SERVER_ROOT_URL: https://grafana.cmnw.ru
