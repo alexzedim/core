@@ -21,8 +21,6 @@ name: 'routing'
 
 services:
   caddy:
-    # upstream fuomag9 image + caddy-dns/selectel — patch-built by
-    # .github/workflows/build-caddy-panel.yml from the pinned upstream tag
     image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel
     pull_policy: if_not_present
     container_name: cmnw-caddy
@@ -32,14 +30,14 @@ services:
       - PRIMARY_DOMAIN=${CADDY_PRIMARY_DOMAIN:-cmnw.me}
     ports:
       - "80:80"
-      - "80:80/udp"   # HTTP/3 Alt-Svc + QUIC
+      - "80:80/udp"
       - "443:443"
-      - "443:443/udp"  # HTTP/3 (QUIC)
+      - "443:443/udp"
     volumes:
-      - caddy-data:/data       # certs/keys/OCSP — not a cache, never wipe
+      - caddy-data:/data
       - caddy-config:/config
       - caddy-logs:/logs
-      - geoip-data:/usr/share/GeoIP:ro,z  # GeoLite2-Country/ASN.mmdb (DB-IP lite)
+      - geoip-data:/usr/share/GeoIP:ro,z
     networks:
       - edge
       - cmnw
@@ -59,7 +57,7 @@ services:
       - CADDY_API_URL=http://cmnw-caddy:2019
       - BASE_URL=${CPM_BASE_URL:-http://128.0.0.255:3001}
     ports:
-      - "128.0.0.255:3001:3000"  # panel UI, LAN-only (3000 is taken by grafana)
+      - "128.0.0.255:3001:3000"
     volumes:
       - caddy-manager-data:/app/data
       - caddy-logs:/logs
@@ -84,10 +82,6 @@ services:
     networks:
       - socket-proxy
 
-  # Keeps panel-created L4 (TCP/UDP) listeners and their published ports in
-  # sync. No panel-managed L4 listeners exist yet — GitLab SSH runs via the
-  # socat sidecar in compose.gitlab.yaml — so the compose dir mount is an
-  # empty placeholder for now.
   l4-port-manager:
     image: ghcr.io/fuomag9/caddy-proxy-manager-l4-port-manager@sha256:d6a1e8ea0d45e1cd418d6c91eeee553248304c84ff0130a356d3ec58ba797ecb
     container_name: cmnw-l4-port-manager
@@ -104,9 +98,6 @@ services:
       - routing-internal
       - socket-proxy
 
-  # Pulls the cmnw.ru certificate from Selectel Certificate Manager and
-  # upserts it into the panel via its REST API. Built from ./cert-sync via
-  # .github/workflows/build-cert-sync.yml -> ghcr.io/alexzedim/cert-sync.
   cert-sync:
     image: ghcr.io/alexzedim/cert-sync:1.0.0
     container_name: cmnw-cert-sync

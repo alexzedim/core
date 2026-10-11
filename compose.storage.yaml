@@ -104,6 +104,38 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # ============================================================================
+  # redis-exporter — Prometheus metrics for the shared Redis
+  # ============================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.93.0
+    container_name: redis-exporter
+    restart: always
+    networks:
+      - storage-network
+      - cmnw
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================================================
+  # pgvector-exporter — Prometheus metrics for the LightRAG postgres
+  # ============================================================================
+  pgvector-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: pgvector-exporter
+    restart: always
+    networks:
+      - storage-network
+      - cmnw
+    environment:
+      DATA_SOURCE_NAME: postgresql://${LIGHTRAG_PG_USER}:${LIGHTRAG_PG_PASSWORD}@pgvector:5432/${LIGHTRAG_PG_DB}?sslmode=disable
+      PG_EXPORTER_WEB_LISTEN_ADDRESS: ':9187'
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   storage-network:
     driver: bridge
