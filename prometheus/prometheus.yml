@@ -71,3 +71,7 @@ scrape_configs:
     - job_name: pgvector
       static_configs:
           - targets: ['pgvector-exporter:9187']
+
+    - job_name: smartctl
+      static_configs:
+          - targets: ['smartctl-exporter:9633']
