@@ -106,6 +106,14 @@ Persistence (since 2026-10-11): **AOF everysec only, RDB disabled** (`--save ""`
 - **zram on the host**: `systemd-zram-generator` (pkg), config `/etc/systemd/zram-generator.conf` — `zram0`, `ram / 2` (15.6G), zstd, swap priority 100. The `/swap2.img` file stays as low-priority (pri −2) fallback with 0B used. Replaced a swapfile on nvme0 that was actively paged (~14 GB/day). To migrate swapped pages again after pressure: `swapoff /swap2.img && swapon /swap2.img` only when `MemAvailable ≥ 8G`.
 - Replaced an earlier "15 jobs" count: prometheus now scrapes **16 jobs** — the list below plus **smartctl** (`smartctl-exporter:9633`, privileged container reading both NVMe drives, 60s polls). Key metrics for manual Grafana panels: `smartctl_device_percentage_used` (nvme0=36, nvme1=100 — the worn disk), `smartctl_device_critical_warning` (nvme1=0x04 until replaced), `smartctl_device_media_errors`, `smartctl_device_temperature{temperature_type="current"}`, `node_filesystem_avail_bytes/size_bytes{mountpoint="/|/mnt"}`.
 
+### GitLab — canonical URL & runtime config (2026-10-11)
+
+Canonical URL is **`https://gitlab.cmnw.ru`** (was `http://gitlab.cmnw.xyz`, which broke every web mutation: Omnibus nginx hardcoded `X-Forwarded-Proto: http` from its plain listener, so Rails' CSRF Origin check rejected all POSTs behind the TLS proxy with 422). TLS terminates at Caddy: panel proxy hosts `gitlab-ru` (`gitlab/git.cmnw.ru` → `gitlab:80`, cmnw.ru wildcard cert) and `gitlab-xyz` (`gitlab/git.cmnw.xyz` → same upstream, now a 302 redirect to `https://gitlab.cmnw.ru` via the panel `redirects` field with `from: "/*"` — `{uri}` placeholders are sanitized away, so it lands on root).
+
+**The runtime source of truth is `/etc/gitlab/gitlab.rb` inside the container (named volume `git_config`), not this repo** — `GITLAB_OMNIBUS_CONFIG` in compose only seeds the metrics whitelist. A gitignored local mirror lives at `gitlab/config/gitlab.rb` (sync manually). After editing gitlab.rb: `docker exec gitlab gitlab-ctl reconfigure` (~1 min, puma restarts; no Portainer redeploy — compose doesn't change). Behind-proxy essentials that must stay in gitlab.rb: `external_url 'https://gitlab.cmnw.ru'` + `nginx['listen_port'] = 80` + `nginx['listen_https'] = false` + `nginx['proxy_set_headers'] = { "X-Forwarded-Proto" => "https", "X-Forwarded-Ssl" => "on" }` — drop the explicit headers and Rails goes back to seeing http.
+
+SSH clone is independent of the URL: host `:2222` → socat `gitlab-ssh` → `gitlab:22` (bundled OpenSSH, `gitlab_shell_ssh_port = 2222`); the second `gitlab-sshd` daemon on container `:2222` is redundant and unused from outside. Panel API notes: `PUT /api/v1/proxy-hosts/{id}` only writes the SQLite DB — the push to Caddy is a separate `POST /api/v1/caddy/apply`; a working API token lives in the `cmnw-cert-sync` container env (`CPM_API_TOKEN`), the `/root/deploy/routing/stack.env` copy of it is stale.
+
 ### Prometheus & Loki Config — host files (since 2026-10-11)
 
 Prometheus and Loki load their configs from **host bind mounts** under `/srv/docker/analytics/` — the inline `configs:` blocks are gone. Canonical copies live in the repo (`prometheus/prometheus.yml`, `loki/loki-config.yaml`); deploy flow: edit in repo → copy to `/srv/docker/analytics/` on the host → `POST http://128.0.0.255:9090/-/reload` (prometheus, `--web.enable-lifecycle` is on) or "Pull and redeploy" the analytics stack for loki. Absolute host paths are mandatory: Portainer runs compose inside its own container, so relative `file:` sources resolve to nonexistent paths. Bearer tokens for the MinIO and Home Assistant jobs are mounted as files (`/srv/docker/analytics/{minio,hass}.token`, mode 644 — the prometheus container runs as `nobody`) and referenced via `credentials_file`; the only remaining stack-env secret is `DATA_SOURCE_NAME` (postgres_exporter DSN). Grafana's `GF_*` settings are inlined in the compose (non-secret).
@@ -114,7 +122,7 @@ Prometheus and Loki load their configs from **host bind mounts** under `/srv/doc
 
 **16 jobs**: prometheus, node, postgres, caddy (`cmnw-caddy:2019`), rabbitmq, minio, home-assistant, gitlab (`/-/metrics`), gitlab-runner-i/ii (`:9252`), grafana, loki, promtail, redis, pgvector, smartctl.
 
-**Auth**: MinIO scrape uses `authorization: Bearer ${MINIO_PROMETHEUS_TOKEN}` (generate with `mc admin prometheus generate <alias> cluster` against the MinIO root creds), Home Assistant uses `authorization: Bearer ${HASS_PROMETHEUS_TOKEN}` (HA long-lived access token; the HA `prometheus:` integration is enabled in `/srv/docker/home-assistant/configuration.yaml`, server-side, not in this repo). GitLab's `/-/metrics` is protected by `GITLAB_OMNIBUS_CONFIG` `monitoring_whitelist` (RFC1918 + loopback) in `compose.gitlab.yaml`. Both tokens live in the stack env (`../envs/analytics/.stack.env` + Portainer), never in the repo.
+**Auth**: MinIO scrape uses `authorization: Bearer ${MINIO_PROMETHEUS_TOKEN}` (generate with `mc admin prometheus generate <alias> cluster` against the MinIO root creds), Home Assistant uses `authorization: Bearer ${HASS_PROMETHEUS_TOKEN}` (HA long-lived access token; the HA `prometheus:` integration is enabled in `/srv/docker/home-assistant/configuration.yaml`, server-side, not in this repo). GitLab's `/-/metrics` is protected by `monitoring_whitelist` (RFC1918 + loopback), kept in sync between `gitlab.rb` in the volume (the live value) and `GITLAB_OMNIBUS_CONFIG` in `compose.gitlab.yaml` — see the GitLab section above. Both tokens live in the stack env (`../envs/analytics/.stack.env` + Portainer), never in the repo.
 
 Prometheus TSDB retention: **720h (30d)**, matching Loki. Exporters for redis (`oliver006/redis_exporter`) and pgvector (second `postgres-exporter` pointed at the `lightrag` DB) run in the **storage** stack.
 
@@ -231,7 +239,7 @@ docker exec postgres pg_isready -U postgres
 docker exec postgres pg_dump -U postgres cmnw > backup_$(date +%Y%m%d).sql
 
 # Routing config changes are made in the caddy-proxy-manager UI
-# (http://128.0.0.255:3000) — it hot-reloads Caddy itself
+# (http://128.0.0.255:3001) — it hot-reloads Caddy itself
 docker logs -f cmnw-caddy
 ```
 
