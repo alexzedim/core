@@ -123,8 +123,6 @@ services:
         user: root
         command:
             - '--smartctl.interval=60s'
-            - '--autodetect-devices'
-            - '--log.level=info'
         networks:
             - cmnw
 
