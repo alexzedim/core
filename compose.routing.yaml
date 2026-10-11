@@ -93,7 +93,7 @@ services:
       - DOCKER_HOST=tcp://cmnw-socket-proxy:2375
     volumes:
       - caddy-manager-data:/data
-      - /mnt/caddy-l4:/compose:ro
+      - /srv/docker/caddy-l4:/compose:ro
     networks:
       - routing-internal
       - socket-proxy
@@ -135,32 +135,32 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/caddy'
+      device: '/srv/docker/caddy'
   caddy-config:
     name: caddy-config
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/caddy-config'
+      device: '/srv/docker/caddy-config'
   caddy-logs:
     name: caddy-logs
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/caddy/logs'
+      device: '/srv/docker/caddy/logs'
   caddy-manager-data:
     name: caddy-manager-data
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/caddy-manager'
+      device: '/srv/docker/caddy-manager'
   geoip-data:
     name: geoip-data
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: '/mnt/caddy-geoip'
+      device: '/srv/docker/caddy-geoip'
