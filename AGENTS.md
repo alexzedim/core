@@ -86,13 +86,13 @@ sudo chown 10000:10000 /srv/docker/caddy /srv/docker/caddy-config /srv/docker/ca
 sudo chown 10001:10001 /srv/docker/caddy-manager /srv/docker/loki
 ```
 
-### Prometheus Config — Dual Source
+### Prometheus & Loki Config — host files (since 2026-10-11)
 
-`compose.analytics.yaml` embeds prometheus config inline via Docker `configs:` block. The file at `prometheus/prometheus.yml` is **not** used by the running stack — it's a standalone reference. When adding scrape targets, edit the inline `prometheus_config` config block in `compose.analytics.yaml`.
+Prometheus and Loki load their configs from **host bind mounts** under `/srv/docker/analytics/` — the inline `configs:` blocks are gone. Canonical copies live in the repo (`prometheus/prometheus.yml`, `loki/loki-config.yaml`); deploy flow: edit in repo → copy to `/srv/docker/analytics/` on the host → `POST http://128.0.0.255:9090/-/reload` (prometheus, `--web.enable-lifecycle` is on) or "Pull and redeploy" the analytics stack for loki. Absolute host paths are mandatory: Portainer runs compose inside its own container, so relative `file:` sources resolve to nonexistent paths. Bearer tokens for the MinIO and Home Assistant jobs are mounted as files (`/srv/docker/analytics/{minio,hass}.token`, mode 644 — the prometheus container runs as `nobody`) and referenced via `credentials_file`; the only remaining stack-env secret is `DATA_SOURCE_NAME` (postgres_exporter DSN). Grafana's `GF_*` settings are inlined in the compose (non-secret).
 
-**Scrape targets are container DNS names** over the stack's shared networks (`cmnw` external + `loki` bridge): storage services, gitlab, gitlab-runner managers, grafana, loki, promtail, redis-exporter, pgvector-exporter, node-exporter, caddy (admin API `cmnw-caddy:2019`). Only Home Assistant uses the host IP `128.0.0.255:8123` (host-network container). The old pattern of publishing exporter ports on the host is retired — `postgres_exporter` and `node-exporter` have no published ports.
+**All scrape targets are DNS names** over the stack's shared networks (`loki` bridge + `cmnw` external): container names for everything containerized, and `core.cmnw:8123` for Home Assistant — the host-network container is reached via the AGH rewrite `core.cmnw → 128.0.0.255` (docker embedded DNS forwards to AGH; do not delete that rewrite). Prometheus scrapes itself as `prometheus:9090`.
 
-**15 jobs**: prometheus, node, postgres, caddy, rabbitmq (`rabbitmq:15692` — the `rabbitmq_prometheus` plugin ships enabled in the 4.2 management image), minio, home-assistant, gitlab (`/-/metrics`), gitlab-runner-i/ii (`:9252`, enabled by the idempotent `listen_address` injection in `compose.git.yaml`), grafana, loki, promtail, redis, pgvector.
+**15 jobs**: prometheus, node, postgres, caddy (`cmnw-caddy:2019`), rabbitmq, minio, home-assistant, gitlab (`/-/metrics`), gitlab-runner-i/ii (`:9252`), grafana, loki, promtail, redis, pgvector.
 
 **Auth**: MinIO scrape uses `authorization: Bearer ${MINIO_PROMETHEUS_TOKEN}` (generate with `mc admin prometheus generate <alias> cluster` against the MinIO root creds), Home Assistant uses `authorization: Bearer ${HASS_PROMETHEUS_TOKEN}` (HA long-lived access token; the HA `prometheus:` integration is enabled in `/srv/docker/home-assistant/configuration.yaml`, server-side, not in this repo). GitLab's `/-/metrics` is protected by `GITLAB_OMNIBUS_CONFIG` `monitoring_whitelist` (RFC1918 + loopback) in `compose.gitlab.yaml`. Both tokens live in the stack env (`../envs/analytics/.stack.env` + Portainer), never in the repo.
 
@@ -100,7 +100,7 @@ Prometheus TSDB retention: **720h (30d)**, matching Loki. Exporters for redis (`
 
 ### Loki — 30-day retention, repo-managed config
 
-Loki does **not** use the image's stock `local-config.yaml`. Like Prometheus, its config is embedded **inline** in `compose.analytics.yaml` (the `loki_config` `configs:` block) — a `file:`-based source does not work here because Portainer runs compose inside its own container and the daemon rejects the resulting bind path. The file at `loki/loki-config.yaml` is the standalone reference copy; edit both together. Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
+Loki does **not** use the image's stock `local-config.yaml`. Its config is the repo file `loki/loki-config.yaml`, deployed to `/srv/docker/analytics/loki-config.yaml` and bind-mounted at `/etc/loki/local-config.yaml` (see "Prometheus & Loki Config"). Retention policy: **30 days, uniform** — enforced by the compactor (`retention_enabled: true`, `retention_period: 30d`) with `max_query_lookback: 30d` capping query windows. Deletion of already-ingested chunks lags by `retention_delete_delay` (default 2h) after the compactor marks them.
 
 Data lives in the `loki` named volume (bind-mounted at `/srv/docker/loki`, owned by uid 10001 — the image's `loki` user). Historically the container ran with no volume and no retention, accumulating ~14.6 GB in its writable layer; that data was migrated to the bind mount and retention enabled on 2026-08-19 (moved from `/mnt/loki` to `/srv/docker/loki` on 2026-10-11).
 
