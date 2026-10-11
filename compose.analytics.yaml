@@ -111,6 +111,23 @@ services:
         networks:
             - cmnw
 
+    # ============================================================================
+    # smartctl-exporter — SMART of both NVMe drives as prometheus metrics
+    # (privileged: /dev/nvme* are root-only; autodetect picks up both drives).
+    # ============================================================================
+    smartctl-exporter:
+        container_name: smartctl-exporter
+        image: prometheuscommunity/smartctl-exporter:v0.14.0
+        restart: always
+        privileged: true
+        user: root
+        command:
+            - '--smartctl.interval=60s'
+            - '--autodetect-devices'
+            - '--log.level=info'
+        networks:
+            - cmnw
+
 networks:
     loki:
         driver: bridge
