@@ -35,4 +35,4 @@ volumes:
         driver_opts:
             type: none
             o: bind
-            device: '/mnt/home-assistant'
+            device: '/srv/docker/home-assistant'
