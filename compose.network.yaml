@@ -13,8 +13,8 @@ services:
             - '128.0.0.255:53:53/tcp'
             - '128.0.0.255:3300:3000/tcp'
         volumes:
-            - /mnt/adguard/conf:/opt/adguardhome/conf
-            - /mnt/adguard/work:/opt/adguardhome/work
+            - /srv/docker/adguard/conf:/opt/adguardhome/conf
+            - /srv/docker/adguard/work:/opt/adguardhome/work
 
     vpn-oracle:
         image: ghcr.io/alexzedim/adguard:latest
