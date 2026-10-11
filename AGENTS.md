@@ -86,6 +86,20 @@ sudo chown 10000:10000 /srv/docker/caddy /srv/docker/caddy-config /srv/docker/ca
 sudo chown 10001:10001 /srv/docker/caddy-manager /srv/docker/loki
 ```
 
+### Shared Redis — DB map & persistence
+
+The storage `redis` instance is shared by several stacks — logical DBs are de-facto owned per app, do not "clean up" without checking this map:
+
+| DB | Owner | Content |
+|----|-------|---------|
+| db0 | cmnw app | `cmnw:cache:*` response cache (TTL ~6.6h) |
+| db1 | osint/dma scrapers | `bull:*` queues + **`bull:osint.characters:<name>@<realm>` — 3.8M-key character-dedup index, ~5.6G, NO TTL (must survive restarts — losing it means rescraping)** |
+| db2/db4 | GitLab | Rails cache + system cache |
+| db3 | GitLab | sessions (`session:`) — flush = all GitLab users re-login |
+| db10 | scrapers | small per-site dedup sets (vk, gibdd, yandex…) |
+
+Persistence (since 2026-10-11): **AOF everysec only, RDB disabled** (`--save ""` in compose). RDB bgsave cadence on the 5.6G dataset was writing ~2.2 TB/day to nvme0. AOF rewrite still fires on 2× growth (~6 GB per event, infrequent). If redis is ever moved to its own disk or the dedup index grows further, the strategic fix is moving `bull:osint.characters:*` to a postgres lookup (the `characters` table in the `cmnw` DB already holds the same entities).
+
 ### Prometheus & Loki Config — host files (since 2026-10-11)
 
 Prometheus and Loki load their configs from **host bind mounts** under `/srv/docker/analytics/` — the inline `configs:` blocks are gone. Canonical copies live in the repo (`prometheus/prometheus.yml`, `loki/loki-config.yaml`); deploy flow: edit in repo → copy to `/srv/docker/analytics/` on the host → `POST http://128.0.0.255:9090/-/reload` (prometheus, `--web.enable-lifecycle` is on) or "Pull and redeploy" the analytics stack for loki. Absolute host paths are mandatory: Portainer runs compose inside its own container, so relative `file:` sources resolve to nonexistent paths. Bearer tokens for the MinIO and Home Assistant jobs are mounted as files (`/srv/docker/analytics/{minio,hass}.token`, mode 644 — the prometheus container runs as `nobody`) and referenced via `credentials_file`; the only remaining stack-env secret is `DATA_SOURCE_NAME` (postgres_exporter DSN). Grafana's `GF_*` settings are inlined in the compose (non-secret).
