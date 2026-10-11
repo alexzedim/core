@@ -17,11 +17,17 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
 
+  # ============================================================================
+  # Redis — RDB snapshots disabled (--save ""): with a ~5.6G dataset the bgsave
+  # cadence alone wrote ~2.2 TB/day to nvme0. Durability is covered by AOF
+  # everysec (appendonly.aof, fsync 1/s). Shared by cmnw (db0), osint/dma
+  # dedup indexes (db1, db10) and GitLab cache+sessions (db2/3/4).
+  # ============================================================================
   redis:
     image: redis:7.4.3-alpine
     restart: always
     container_name: redis
-    command: redis-server --requirepass $REDIS_PASSWORD --appendonly yes
+    command: redis-server --requirepass $REDIS_PASSWORD --appendonly yes --save ""
     volumes:
       - redis:/data:rw,z
     ports:
