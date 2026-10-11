@@ -40,6 +40,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER_REDIRECT_URL: https://minio.cmnw.ru
     command: server /bitnami/minio/data --console-address ":9001"
     volumes:
       - minio-s3:/bitnami/minio/data
