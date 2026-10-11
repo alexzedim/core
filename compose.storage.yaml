@@ -155,7 +155,7 @@ volumes:
     driver_opts:
       type: 'none'
       o: 'bind'
-      device: '/mnt/rabbitmq'
+      device: '/srv/docker/rabbitmq'
   redis:
     driver: local
   minio-s3:
@@ -166,5 +166,5 @@ volumes:
     driver_opts:
       type: 'none'
       o: 'bind'
-      device: '/mnt/pgvector'
+      device: '/srv/docker/pgvector'
 
