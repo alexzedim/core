@@ -27,7 +27,7 @@ scrape_configs:
       metrics_path: /minio/v2/metrics/cluster
       authorization:
           type: Bearer
-          credentials: ${MINIO_PROMETHEUS_TOKEN}
+          credentials_file: /etc/prometheus/minio.token
       static_configs:
           - targets: ['minio:9000']
 
@@ -35,7 +35,7 @@ scrape_configs:
       metrics_path: /api/prometheus
       authorization:
           type: Bearer
-          credentials: ${HASS_PROMETHEUS_TOKEN}
+          credentials_file: /etc/prometheus/hass.token
       static_configs:
           - targets: ['128.0.0.255:8123']
 

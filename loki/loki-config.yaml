@@ -1,8 +1,8 @@
 # Loki — single binary, filesystem storage, 30-day retention.
-# STANDALONE REFERENCE — the running stack loads this config from the inline
-# `loki_config` block in compose.analytics.yaml (a `file:` source breaks
-# under Portainer, whose compose resolves paths inside its own container).
-# Keep the two copies in sync when changing the policy.
+# THIS FILE IS THE RUNNING CONFIG: deployed to /srv/docker/analytics/loki-config.yaml
+# on the host and bind-mounted into the loki container (absolute host paths
+# survive Portainer's in-container compose; a relative `file:` source does not).
+# Edit here, copy to /srv/docker/analytics/, "Pull and redeploy" the analytics stack.
 auth_enabled: false
 
 server:

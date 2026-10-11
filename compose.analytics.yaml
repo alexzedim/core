@@ -1,4 +1,17 @@
 name: 'analytics'
+
+# Monitoring stack: Prometheus + Grafana + Loki + Promtail + exporters.
+#
+# Config files are HOST bind mounts, not inline `configs:` blocks: canonical
+# copies live in the repo (prometheus/prometheus.yml, loki/loki-config.yaml)
+# and are deployed to /srv/docker/analytics/ on the host. Bearer tokens for
+# the MinIO and Home Assistant scrape targets are mounted as files
+# (/srv/docker/analytics/{minio,hass}.token) and referenced via
+# `credentials_file` — compose interpolation of `${VAR}` does not happen
+# inside bind-mounted files. Only DATA_SOURCE_NAME (postgres_exporter DSN)
+# still comes from the Portainer stack env; the GF_* Grafana settings are
+# inlined below (non-secret, LAN-only).
+
 services:
     loki:
         container_name: loki
@@ -9,9 +22,7 @@ services:
         command: -config.file=/etc/loki/local-config.yaml
         volumes:
             - loki:/loki
-        configs:
-            - source: loki_config
-              target: /etc/loki/local-config.yaml
+            - /srv/docker/analytics/loki-config.yaml:/etc/loki/local-config.yaml:ro
         networks:
             - loki
 
@@ -33,9 +44,9 @@ services:
             - '9090:9090'
         volumes:
             - prometheus_data:/prometheus
-        configs:
-            - source: prometheus_config
-              target: /etc/prometheus/prometheus.yml
+            - /srv/docker/analytics/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - /srv/docker/analytics/minio.token:/etc/prometheus/minio.token:ro
+            - /srv/docker/analytics/hass.token:/etc/prometheus/hass.token:ro
         command:
             - '--config.file=/etc/prometheus/prometheus.yml'
             - '--storage.tsdb.path=/prometheus'
@@ -64,10 +75,10 @@ services:
         image: grafana/grafana:13.2.3
         restart: always
         environment:
-            GF_PATHS_PROVISIONING: ${GF_PATHS_PROVISIONING}
-            GF_AUTH_ANONYMOUS_ENABLED: ${GF_AUTH_ANONYMOUS_ENABLED}
-            GF_AUTH_ANONYMOUS_ORG_ROLE: ${GF_AUTH_ANONYMOUS_ORG_ROLE}
-            GF_FEATURE_TOGGLES_ENABLE: ${GF_FEATURE_TOGGLES_ENABLE}
+            GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+            GF_AUTH_ANONYMOUS_ENABLED: true
+            GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+            GF_FEATURE_TOGGLES_ENABLE: alertingSimplifiedRouting,alertingQueryAndExpressionsStepMode
             GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS: true
             GF_PLUGIN_PUBLIC_KEY_RETRIEVAL_DISABLED: true
             GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
@@ -115,120 +126,3 @@ volumes:
             type: 'none'
             o: 'bind'
             device: '/srv/docker/loki'
-
-configs:
-    loki_config:
-        content: |
-            auth_enabled: false
-
-            server:
-                http_listen_port: 3100
-
-            common:
-                instance_addr: 127.0.0.1
-                path_prefix: /loki
-                storage:
-                    filesystem:
-                        chunks_directory: /loki/chunks
-                        rules_directory: /loki/rules
-                replication_factor: 1
-                ring:
-                    kvstore:
-                        store: inmemory
-
-            schema_config:
-                configs:
-                    - from: 2020-10-24
-                      store: tsdb
-                      object_store: filesystem
-                      schema: v13
-                      index:
-                          prefix: index_
-                          period: 24h
-
-            compactor:
-                working_directory: /loki/compactor
-                delete_request_store: filesystem
-                retention_enabled: true
-
-            limits_config:
-                retention_period: 30d
-                max_query_lookback: 30d
-
-            ruler:
-                alertmanager_url: http://localhost:9093
-    prometheus_config:
-        content: |
-            global:
-                scrape_interval: 15s
-                evaluation_interval: 15s
-
-            scrape_configs:
-                - job_name: prometheus
-                  static_configs:
-                      - targets: ['127.0.0.1:9090']
-
-                - job_name: node
-                  static_configs:
-                      - targets: ['node-exporter:9100']
-
-                - job_name: postgres
-                  static_configs:
-                      - targets: ['postgres_exporter:9187']
-
-                - job_name: caddy
-                  static_configs:
-                      - targets: ['cmnw-caddy:2019']
-
-                - job_name: rabbitmq
-                  static_configs:
-                      - targets: ['rabbitmq:15692']
-
-                - job_name: minio
-                  metrics_path: /minio/v2/metrics/cluster
-                  authorization:
-                      type: Bearer
-                      credentials: ${MINIO_PROMETHEUS_TOKEN}
-                  static_configs:
-                      - targets: ['minio:9000']
-
-                - job_name: home-assistant
-                  metrics_path: /api/prometheus
-                  authorization:
-                      type: Bearer
-                      credentials: ${HASS_PROMETHEUS_TOKEN}
-                  static_configs:
-                      - targets: ['128.0.0.255:8123']
-
-                - job_name: gitlab
-                  metrics_path: /-/metrics
-                  static_configs:
-                      - targets: ['gitlab:80']
-
-                - job_name: gitlab-runner-i
-                  static_configs:
-                      - targets: ['gitlab-runner-I:9252']
-
-                - job_name: gitlab-runner-ii
-                  static_configs:
-                      - targets: ['gitlab-runner-II:9252']
-
-                - job_name: grafana
-                  static_configs:
-                      - targets: ['grafana:3000']
-
-                - job_name: loki
-                  static_configs:
-                      - targets: ['loki:3100']
-
-                - job_name: promtail
-                  static_configs:
-                      - targets: ['promtail:9080']
-
-                - job_name: redis
-                  static_configs:
-                      - targets: ['redis-exporter:9121']
-
-                - job_name: pgvector
-                  static_configs:
-                      - targets: ['pgvector-exporter:9187']
