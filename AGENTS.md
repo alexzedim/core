@@ -87,7 +87,13 @@ sudo chown 10001:10001 /mnt/caddy-manager
 
 `compose.analytics.yaml` embeds prometheus config inline via Docker `configs:` block. The file at `prometheus/prometheus.yml` is **not** used by the running stack — it's a standalone reference. When adding scrape targets, edit the inline `prometheus_config` config block in `compose.analytics.yaml`.
 
-Scrape targets use host IP `128.0.0.255` to reach services that run on the host network (Home Assistant) or on different compose networks.
+**Scrape targets are container DNS names** over the stack's shared networks (`cmnw` external + `loki` bridge): storage services, gitlab, gitlab-runner managers, grafana, loki, promtail, redis-exporter, pgvector-exporter, node-exporter, caddy (admin API `cmnw-caddy:2019`). Only Home Assistant uses the host IP `128.0.0.255:8123` (host-network container). The old pattern of publishing exporter ports on the host is retired — `postgres_exporter` and `node-exporter` have no published ports.
+
+**15 jobs**: prometheus, node, postgres, caddy, rabbitmq (`rabbitmq:15692` — the `rabbitmq_prometheus` plugin ships enabled in the 4.2 management image), minio, home-assistant, gitlab (`/-/metrics`), gitlab-runner-i/ii (`:9252`, enabled by the idempotent `listen_address` injection in `compose.git.yaml`), grafana, loki, promtail, redis, pgvector.
+
+**Auth**: MinIO scrape uses `authorization: Bearer ${MINIO_PROMETHEUS_TOKEN}` (generate with `mc admin prometheus generate <alias> cluster` against the MinIO root creds), Home Assistant uses `authorization: Bearer ${HASS_PROMETHEUS_TOKEN}` (HA long-lived access token; the HA `prometheus:` integration is enabled in `/mnt/home-assistant/configuration.yaml`, server-side, not in this repo). GitLab's `/-/metrics` is protected by `GITLAB_OMNIBUS_CONFIG` `monitoring_whitelist` (RFC1918 + loopback) in `compose.gitlab.yaml`. Both tokens live in the stack env (`../envs/analytics/.stack.env` + Portainer), never in the repo.
+
+Prometheus TSDB retention: **720h (30d)**, matching Loki. Exporters for redis (`oliver006/redis_exporter`) and pgvector (second `postgres-exporter` pointed at the `lightrag` DB) run in the **storage** stack.
 
 ### Loki — 30-day retention, repo-managed config
 
@@ -142,9 +148,9 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 
 | File | Services | Networks |
 |------|----------|----------|
-| `compose.storage.yaml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433) | `storage-network`, `cmnw` |
+| `compose.storage.yaml` | PostgreSQL 17.4 (vanilla), Redis 7.4.3, MinIO, RabbitMQ 4.2.2, RabbitScout, pgvector 0.8.6 (LightRAG DB, :5433), redis-exporter, pgvector-exporter | `storage-network`, `cmnw` |
 | `compose.routing.yaml` | Caddy (fuomag9 panel image), caddy-proxy-manager (web UI), docker-socket-proxy, l4-port-manager, cert-sync | `edge`, `cmnw`, `routing-internal`, `socket-proxy` |
-| `compose.analytics.yaml` | Prometheus, Grafana, Loki, Promtail, Postgres Exporter | `loki`, `cmnw` |
+| `compose.analytics.yaml` | Prometheus 3.15, Grafana 13.2, Loki 3.6.3, Promtail 3.6.3, postgres-exporter, node-exporter | `loki`, `cmnw` |
 | `compose.home.yaml` | Home Assistant 2026.9.4 (LAN-only :8123, mDNS discovery) | `host` |
 | `compose.git.yaml` | 6× GitHub Actions runners (`cmnw-github-runner-I..III`, `core-github-runner`, `oraculum-github-runner-I/II`), 2× GitLab runner managers (`gitlab-runner-I/II`, instance record "core-gitlab-runner", register `http://gitlab` on `cmnw`), docker-prune janitor | `runner-network`, `cmnw` (ext) |
 | `compose.gitlab.yaml` | GitLab CE + gitlab-ssh (socat relay, host `:2222` → `gitlab:22`) | `cmnw` |
@@ -163,7 +169,7 @@ Images built by the repo's GitHub Actions workflows are available on the deploy 
 - **Top of each file:** `name: '<category>'` (no `version:` field — it was dropped repo-wide as obsolete)
 - **4-space indentation** in all YAML
 - **Ports:** quote as strings (`'5432:5432'`), except where the existing file already uses unquoted — be consistent within each file
-- **Comments:** in compose files, comments are allowed ONLY in the top-of-file header block — no inline or per-service comments anywhere else in the file; move all explanation into the header
+- **Comments:** in compose files, comments are allowed ONLY in the top-of-file header block and in `# ===...===` section banners above a service — no other inline or per-service comments anywhere else in the file; move all explanation into the header or a banner
 - **Env vars:** use `${VAR_NAME}` in compose files. The committed **`.env.example`** is the canonical template listing every variable the stacks reference — non-secret defaults filled in, secrets blanked. Copy it to `.env` per host and fill in real values. The root `.env` is gitignored (see `.gitignore`: `!/.env` then `.env` — the later pattern wins, so `.env` is ignored while `.env.example` is committed). On the production server, secrets are injected via Portainer env or `stack.env` (`env_file`), never committed. When adding a new `${VAR}` to a compose file, add it to `.env.example` in the matching section.
 - **Image tags:** pin specific versions (e.g., `postgres:17.4`), never `:latest` for production services
 - **`kebab-case`** for all resource names (networks, volumes, services)

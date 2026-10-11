@@ -1,250 +1,234 @@
 name: 'analytics'
 services:
-  loki:
-    container_name: loki
-    image: grafana/loki:3.6.3
-    restart: always
-    ports:
-      - '3100:3100'
-    command: -config.file=/etc/loki/local-config.yaml
-    volumes:
-      - loki:/loki
-    configs:
-      - source: loki_config
-        target: /etc/loki/local-config.yaml
-    networks:
-      - loki
+    loki:
+        container_name: loki
+        image: grafana/loki:3.6.3
+        restart: always
+        ports:
+            - '3100:3100'
+        command: -config.file=/etc/loki/local-config.yaml
+        volumes:
+            - loki:/loki
+        configs:
+            - source: loki_config
+              target: /etc/loki/local-config.yaml
+        networks:
+            - loki
 
-  promtail:
-    container_name: promtail
-    image: grafana/promtail:latest
-    restart: always
-    volumes:
-      - /var/log:/var/log
-    command: -config.file=/etc/promtail/config.yml
-    networks:
-      - loki
+    promtail:
+        container_name: promtail
+        image: grafana/promtail:3.6.3
+        restart: always
+        volumes:
+            - /var/log:/var/log
+        command: -config.file=/etc/promtail/config.yml
+        networks:
+            - loki
 
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:latest
-    restart: always
-    ports:
-      - '9090:9090'
-    volumes:
-      - prometheus_data:/prometheus
-    configs:
-      - source: prometheus_config
-        target: /etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - loki
-      - cmnw
+    prometheus:
+        container_name: prometheus
+        image: prom/prometheus:v3.15.0
+        restart: always
+        ports:
+            - '9090:9090'
+        volumes:
+            - prometheus_data:/prometheus
+        configs:
+            - source: prometheus_config
+              target: /etc/prometheus/prometheus.yml
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/etc/prometheus/console_libraries'
+            - '--web.console.templates=/etc/prometheus/consoles'
+            - '--storage.tsdb.retention.time=720h'
+            - '--web.enable-lifecycle'
+        networks:
+            - loki
+            - cmnw
 
-  postgres_exporter:
-    container_name: postgres_exporter
-    image: prometheuscommunity/postgres-exporter:latest
-    restart: always
-    ports:
-      - '9187:9187'
-    environment:
-      DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
-      PG_EXPORTER_WEB_LISTEN_ADDRESS: ":9187"
-      PG_EXPORTER_WEB_TELEMETRY_PATH: "/metrics"
-      PG_EXPORTER_DISABLE_SETTINGS_METRICS: false
-    networks:
-      - loki
+    postgres_exporter:
+        container_name: postgres_exporter
+        image: prometheuscommunity/postgres-exporter:v0.20.1
+        restart: always
+        environment:
+            DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
+            PG_EXPORTER_WEB_LISTEN_ADDRESS: ':9187'
+            PG_EXPORTER_WEB_TELEMETRY_PATH: '/metrics'
+            PG_EXPORTER_DISABLE_SETTINGS_METRICS: false
+        networks:
+            - loki
 
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
-    restart: always
-    environment:
-      GF_PATHS_PROVISIONING: ${GF_PATHS_PROVISIONING}
-      GF_AUTH_ANONYMOUS_ENABLED: ${GF_AUTH_ANONYMOUS_ENABLED}
-      GF_AUTH_ANONYMOUS_ORG_ROLE: ${GF_AUTH_ANONYMOUS_ORG_ROLE}
-      GF_FEATURE_TOGGLES_ENABLE: ${GF_FEATURE_TOGGLES_ENABLE}
-      GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS: true
-      GF_PLUGIN_PUBLIC_KEY_RETRIEVAL_DISABLED: true
-      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
-      GF_ANALYTICS_CHECK_FOR_UPDATES: false
-      GF_ANALYTICS_REPORTING_ENABLED: false
-      GF_INSTALL_IMAGE_RENDERER_PLUGIN: false
-      # Force Grafana to trust the proxy (Traefik) for HTTPS
-      GF_SERVER_ROOT_URL: https://grafana.cmnw.ru
-      GF_SERVER_PROTOCOL: http
-    ports:
-      - '3000:3000'
-    volumes:
-      - grafana:/var/lib/grafana
-    networks:
-      - loki
-      - cmnw
+    grafana:
+        container_name: grafana
+        image: grafana/grafana:13.2.3
+        restart: always
+        environment:
+            GF_PATHS_PROVISIONING: ${GF_PATHS_PROVISIONING}
+            GF_AUTH_ANONYMOUS_ENABLED: ${GF_AUTH_ANONYMOUS_ENABLED}
+            GF_AUTH_ANONYMOUS_ORG_ROLE: ${GF_AUTH_ANONYMOUS_ORG_ROLE}
+            GF_FEATURE_TOGGLES_ENABLE: ${GF_FEATURE_TOGGLES_ENABLE}
+            GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS: true
+            GF_PLUGIN_PUBLIC_KEY_RETRIEVAL_DISABLED: true
+            GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: false
+            GF_ANALYTICS_CHECK_FOR_UPDATES: false
+            GF_ANALYTICS_REPORTING_ENABLED: false
+            GF_INSTALL_IMAGE_RENDERER_PLUGIN: false
+            GF_SERVER_ROOT_URL: https://grafana.cmnw.ru
+            GF_SERVER_PROTOCOL: http
+        ports:
+            - '3000:3000'
+        volumes:
+            - grafana:/var/lib/grafana
+        networks:
+            - loki
+            - cmnw
 
-  node-exporter:
-    container_name: node-exporter
-    image: prom/node-exporter:v1.9.1
-    restart: always
-    command:
-      - '--path.rootfs=/rootfs'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-    pid: host
-    ports:
-      - '9100:9100'
-    volumes:
-      - '/:/rootfs:ro,rslave'
-      - '/proc:/host/proc:ro'
-      - '/sys:/host/sys:ro'
-    networks:
-      - cmnw
+    node-exporter:
+        container_name: node-exporter
+        image: prom/node-exporter:v1.9.1
+        restart: always
+        command:
+            - '--path.rootfs=/rootfs'
+            - '--path.procfs=/host/proc'
+            - '--path.sysfs=/host/sys'
+        pid: host
+        volumes:
+            - '/:/rootfs:ro,rslave'
+            - '/proc:/host/proc:ro'
+            - '/sys:/host/sys:ro'
+        networks:
+            - cmnw
 
-  # Traefik egress
 networks:
-  loki:
-    driver: bridge
-  cmnw:
-    external: true
+    loki:
+        driver: bridge
+    cmnw:
+        external: true
 
 volumes:
-  grafana:
-  prometheus_data:
-  loki:
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/mnt/loki'
+    grafana:
+    prometheus_data:
+    loki:
+        driver: local
+        driver_opts:
+            type: 'none'
+            o: 'bind'
+            device: '/mnt/loki'
 
 configs:
-  # NOTE: loki config is embedded inline (like prometheus_config) because
-  # Portainer runs compose inside its own container — a `file:` source would
-  # resolve to a path that exists in Portainer's container but not on the
-  # host, and the daemon rejects the bind. loki/loki-config.yaml is the
-  # standalone reference copy; edit both together.
-  loki_config:
-    content: |
-      # Loki — single binary, filesystem storage, 30-day retention.
-      auth_enabled: false
+    loki_config:
+        content: |
+            auth_enabled: false
 
-      server:
-          http_listen_port: 3100
+            server:
+                http_listen_port: 3100
 
-      common:
-          instance_addr: 127.0.0.1
-          path_prefix: /loki
-          storage:
-              filesystem:
-                  chunks_directory: /loki/chunks
-                  rules_directory: /loki/rules
-          replication_factor: 1
-          ring:
-              kvstore:
-                  store: inmemory
+            common:
+                instance_addr: 127.0.0.1
+                path_prefix: /loki
+                storage:
+                    filesystem:
+                        chunks_directory: /loki/chunks
+                        rules_directory: /loki/rules
+                replication_factor: 1
+                ring:
+                    kvstore:
+                        store: inmemory
 
-      schema_config:
-          configs:
-              - from: 2020-10-24
-                store: tsdb
-                object_store: filesystem
-                schema: v13
-                index:
-                  prefix: index_
-                  period: 24h
+            schema_config:
+                configs:
+                    - from: 2020-10-24
+                      store: tsdb
+                      object_store: filesystem
+                      schema: v13
+                      index:
+                          prefix: index_
+                          period: 24h
 
-      # Retention: the compactor marks and deletes everything older than
-      # retention_period (single uniform policy, no per-stream overrides).
-      # Deletion of already-ingested data lags by retention_delete_delay (default 2h).
-      compactor:
-          working_directory: /loki/compactor
-          delete_request_store: filesystem
-          retention_enabled: true
+            compactor:
+                working_directory: /loki/compactor
+                delete_request_store: filesystem
+                retention_enabled: true
 
-      limits_config:
-          retention_period: 30d
-          max_query_lookback: 30d
+            limits_config:
+                retention_period: 30d
+                max_query_lookback: 30d
 
-      ruler:
-          alertmanager_url: http://localhost:9093
-  prometheus_config:
-    content: |
-      global:
-        scrape_interval: 15s
-        evaluation_interval: 15s
+            ruler:
+                alertmanager_url: http://localhost:9093
+    prometheus_config:
+        content: |
+            global:
+                scrape_interval: 15s
+                evaluation_interval: 15s
 
-      rule_files:
-        # - "first_rules.yml"
-        # - "second_rules.yml"
+            scrape_configs:
+                - job_name: prometheus
+                  static_configs:
+                      - targets: ['127.0.0.1:9090']
 
-      scrape_configs:
-        - job_name: 'prometheus'
-          static_configs:
-            - targets: ['127.0.0.1:9090']
+                - job_name: node
+                  static_configs:
+                      - targets: ['node-exporter:9100']
 
-        - job_name: 'postgres'
-          static_configs:
-            - targets: ['128.0.0.255:9187']
-          scrape_interval: 15s
-          metrics_path: /metrics
+                - job_name: postgres
+                  static_configs:
+                      - targets: ['postgres_exporter:9187']
 
-        - job_name: 'rabbitmq'
-          static_configs:
-            - targets: ['128.0.0.255:15692']
-          scrape_interval: 15s
-          metrics_path: /metrics
-          scheme: http
+                - job_name: caddy
+                  static_configs:
+                      - targets: ['cmnw-caddy:2019']
 
-        - job_name: 'minio'
-          bearer_token: <secret>
-          metrics_path: /minio/v2/metrics/cluster
-          scheme: http
-          static_configs:
-            - targets: ['128.0.0.255:9000']
-  
-        - job_name: 'caddy'
-          static_configs:
-            - targets: ['cmnw-caddy:2019']
-          scrape_interval: 15s
-          metrics_path: /metrics
-          # caddy_* series from Caddy's admin API (routing stack, shared cmnw
-          # network). If the panel-generated config turns out not to expose
-          # /metrics on :2019, use the panel's own Prometheus endpoint instead.
+                - job_name: rabbitmq
+                  static_configs:
+                      - targets: ['rabbitmq:15692']
 
-        - job_name: 'home-assistant'
-          metrics_path: /api/prometheus
-          scheme: http
-          static_configs:
-            - targets: ['128.0.0.255:8123']
-          # If Home Assistant's /api/prometheus requires authentication (not using requires_auth: false)
-          # uncomment and configure one of the following:
-          # authorization:
-          #   credentials: 'YOUR_LONG_LIVED_ACCESS_TOKEN' # Replace with your HA token
-          # OR (for older Prometheus versions, less secure)
-          # bearer_token: 'YOUR_LONG_LIVED_ACCESS_TOKEN'
+                - job_name: minio
+                  metrics_path: /minio/v2/metrics/cluster
+                  authorization:
+                      type: Bearer
+                      credentials: ${MINIO_PROMETHEUS_TOKEN}
+                  static_configs:
+                      - targets: ['minio:9000']
 
-        - job_name: 'cmnw-api'
-          static_configs:
-            - targets: ['128.0.0.255:8080']
-          scrape_interval: 15s
-          metrics_path: /api/metrics
-          scheme: http
+                - job_name: home-assistant
+                  metrics_path: /api/prometheus
+                  authorization:
+                      type: Bearer
+                      credentials: ${HASS_PROMETHEUS_TOKEN}
+                  static_configs:
+                      - targets: ['128.0.0.255:8123']
 
-        - job_name: 'node'
-          static_configs:
-            - targets: ['128.0.0.255:9100']
-          scrape_interval: 15s
-          metrics_path: /metrics
+                - job_name: gitlab
+                  metrics_path: /-/metrics
+                  static_configs:
+                      - targets: ['gitlab:80']
 
-        - job_name: 'qdrant'
-          static_configs:
-            - targets: ['128.0.0.255:6333']
-          scrape_interval: 15s
-          metrics_path: /metrics
-          scheme: http
+                - job_name: gitlab-runner-i
+                  static_configs:
+                      - targets: ['gitlab-runner-I:9252']
 
+                - job_name: gitlab-runner-ii
+                  static_configs:
+                      - targets: ['gitlab-runner-II:9252']
+
+                - job_name: grafana
+                  static_configs:
+                      - targets: ['grafana:3000']
+
+                - job_name: loki
+                  static_configs:
+                      - targets: ['loki:3100']
+
+                - job_name: promtail
+                  static_configs:
+                      - targets: ['promtail:9080']
+
+                - job_name: redis
+                  static_configs:
+                      - targets: ['redis-exporter:9121']
+
+                - job_name: pgvector
+                  static_configs:
+                      - targets: ['pgvector-exporter:9187']

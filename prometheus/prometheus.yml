@@ -2,17 +2,72 @@ global:
     scrape_interval: 15s
     evaluation_interval: 15s
 
-rule_files:
-# - "first_rules.yml"
-# - "second_rules.yml"
-
 scrape_configs:
-    - job_name: 'prometheus'
+    - job_name: prometheus
       static_configs:
-          - targets: ['localhost:9090']
+          - targets: ['127.0.0.1:9090']
 
-    - job_name: 'postgres'
+    - job_name: node
+      static_configs:
+          - targets: ['node-exporter:9100']
+
+    - job_name: postgres
       static_configs:
           - targets: ['postgres_exporter:9187']
-      scrape_interval: 30s
-      metrics_path: /metrics
+
+    - job_name: caddy
+      static_configs:
+          - targets: ['cmnw-caddy:2019']
+
+    - job_name: rabbitmq
+      static_configs:
+          - targets: ['rabbitmq:15692']
+
+    - job_name: minio
+      metrics_path: /minio/v2/metrics/cluster
+      authorization:
+          type: Bearer
+          credentials: ${MINIO_PROMETHEUS_TOKEN}
+      static_configs:
+          - targets: ['minio:9000']
+
+    - job_name: home-assistant
+      metrics_path: /api/prometheus
+      authorization:
+          type: Bearer
+          credentials: ${HASS_PROMETHEUS_TOKEN}
+      static_configs:
+          - targets: ['128.0.0.255:8123']
+
+    - job_name: gitlab
+      metrics_path: /-/metrics
+      static_configs:
+          - targets: ['gitlab:80']
+
+    - job_name: gitlab-runner-i
+      static_configs:
+          - targets: ['gitlab-runner-I:9252']
+
+    - job_name: gitlab-runner-ii
+      static_configs:
+          - targets: ['gitlab-runner-II:9252']
+
+    - job_name: grafana
+      static_configs:
+          - targets: ['grafana:3000']
+
+    - job_name: loki
+      static_configs:
+          - targets: ['loki:3100']
+
+    - job_name: promtail
+      static_configs:
+          - targets: ['promtail:9080']
+
+    - job_name: redis
+      static_configs:
+          - targets: ['redis-exporter:9121']
+
+    - job_name: pgvector
+      static_configs:
+          - targets: ['pgvector-exporter:9187']

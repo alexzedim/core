@@ -1,20 +1,5 @@
 name: 'oraculum'
 services:
-  # kerberos — not deployed yet; uncomment when the fleet goes live
-  # kerberos:
-  #   image: ghcr.io/alexzedim/kerberos:latest
-  #   pull_policy: if_not_present
-  #   container_name: kerberos
-  #   restart: always
-  #   command: ['node', 'dist/apps/kerberos/src/main.js']
-  #   env_file:
-  #     - stack.env
-  #   environment:
-  #     NODE_ENV: production
-  #     APP_NAME: kerberos
-  #   networks:
-  #     - oraculum
-
   indexator:
     image: ghcr.io/alexzedim/indexator:v1.1.8
     pull_policy: if_not_present
