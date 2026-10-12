@@ -84,6 +84,19 @@ services:
       HTTP_PROXY: http://128.0.0.255:3128
       HTTPS_PROXY: http://128.0.0.255:3128
       NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0
+      RABBITMQ_URL: amqp://${RABBIT_USER}:${RABBIT_PASSWORD}@${RABBIT_HOST}:${RABBIT_PORT}/${RABBIT_VHOST}
+      LLM_BINDING: openai
+      EMBEDDING_BINDING: openai
+      EMBEDDING_BINDING_HOST: https://openrouter.ai/api/v1
+      EMBEDDING_BINDING_API_KEY: ${LLM_BINDING_API_KEY}
+      RERANK_BINDING: cohere
+      LIGHTRAG_KV_STORAGE: PGKVStorage
+      LIGHTRAG_VECTOR_STORAGE: PGVectorStorage
+      LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage
+      LIGHTRAG_GRAPH_STORAGE: PGTableGraphStorage
+      PORT: 8084
+      WORKERS: '1'
     networks:
       - oraculum
     security_opt:
