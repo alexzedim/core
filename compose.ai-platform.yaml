@@ -14,7 +14,7 @@
 # databases ai-documents-dev + wiki), redis :6379 db 5, lightrag :9621
 # (oraculum stack), MinIO :9000 (region russia-1), rabbitmq :5672 (vhost
 # ai-platform), loki :3100. Public hosts (caddy edge): ai-documents.cmnw.ru
-# → :2051, wiki.cmnw.ru → :4000, s3.cmnw.ru → :9000.
+# → :2051, wiki.cmnw.ru → :2054, s3.cmnw.ru → :9000. Host ports are one tight batch: 2050 backend, 2051 frontend, 2052 worker, 2053 indexator, 2054 wiki.
 # ============================================================================
 name: 'ai-platform'
 
@@ -95,7 +95,7 @@ services:
     container_name: wiki
     restart: unless-stopped
     ports:
-      - '128.0.0.255:4000:3000'
+      - '128.0.0.255:2054:3000'
     env_file:
       - stack.env
     volumes:
