@@ -23,7 +23,7 @@ on:
 env:
   UPSTREAM_TAG: ${{ github.event.inputs.upstream_tag || 'v1.13.3' }}
   UPSTREAM_REPO: https://github.com/ingres-si/ingressi
-  IMAGE_TAG: 1.13.3-selectel.3
+  IMAGE_TAG: 1.13.3-selectel.4
 
 jobs:
   build:

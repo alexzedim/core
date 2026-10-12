@@ -27,7 +27,7 @@ name: 'routing'
 
 services:
   caddy:
-    image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel.3
+    image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel.4
     pull_policy: if_not_present
     container_name: cmnw-caddy
     restart: always
@@ -52,7 +52,7 @@ services:
       - routing-internal
 
   caddy-manager:
-    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel.3
+    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel.4
     pull_policy: if_not_present
     container_name: cmnw-caddy-manager
     restart: always
