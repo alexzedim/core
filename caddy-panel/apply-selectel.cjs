@@ -79,17 +79,21 @@ patch(
   "ENV GOPROXY=https://goproxy.cn,direct\nRUN sh ./update-compatibility-pins.sh"
 );
 
-// 5. caddy.ts — L4 TLS termination for Postgres: emit caddy-l4's
-//    postgres_tls handler BEFORE the tls handler when an L4 proxy host opts
-//    in via meta {"postgresSsl": true}. postgres_tls only consumes the
-//    PostgreSQL SSLRequest preamble and replies 'S' (per its docs, "put a
-//    tls handler next to perform the actual TLS handshake") — the plain
-//    "tls" handler alone expects the ClientHello as the first bytes and
-//    breaks every standard libpq/JDBC client.
+// 5. caddy.ts — L4 TLS termination for Postgres: when an L4 proxy host opts
+//    in via meta {"postgresSsl": true}, emit caddy-l4's postgres_tls handler
+//    BEFORE the tls handler, with an ALPN connection policy advertising the
+//    "postgresql" protocol. postgres_tls only consumes the PostgreSQL
+//    SSLRequest preamble and replies 'S' (per its docs, "put a tls handler
+//    next to perform the actual TLS handshake"); the plain "tls" handler
+//    alone expects the ClientHello as the first bytes, which breaks every
+//    standard libpq/JDBC client, and without the ALPN policy libpq 17+
+//    clients die with "tlsv1 alert no application protocol". Matched routes
+//    for such hosts must use matcherType "none" — the tls_sni matcher peeks
+//    a ClientHello that never comes (SSLRequest arrives first).
 patch(
   "src/lib/caddy.ts",
   '      if (host.tlsTermination) {\n        handlers.push({ handler: "tls" });\n      }',
-  '      if (host.tlsTermination) {\n        if ((meta as unknown as { postgresSsl?: boolean } | null)?.postgresSsl) {\n          handlers.push({ handler: "postgres_tls" }, { handler: "tls" });\n        } else {\n          handlers.push({ handler: "tls" });\n        }\n      }'
+  '      if (host.tlsTermination) {\n        if ((meta as unknown as { postgresSsl?: boolean } | null)?.postgresSsl) {\n          handlers.push({ handler: "postgres_tls" }, { handler: "tls", connection_policies: [{ alpn: ["postgresql"] }] });\n        } else {\n          handlers.push({ handler: "tls" });\n        }\n      }'
 );
 
 console.log("selectel patch applied against " + tag);
