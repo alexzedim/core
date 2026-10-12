@@ -18,10 +18,16 @@ name: 'routing'
 # Certificate Manager (Let's Encrypt, DNS-01 — runs automatically because the
 # zone lives on Selectel DNS) and delivered into the panel by the cert-sync
 # sidecar. See AGENTS.md "Certificate automation".
+#
+# External DB endpoints: the panel's L4 proxy hosts (TLS termination,
+# SNI cmnw.ru/*.cmnw.ru) listen on :25432 (postgres:5432) and :25433
+# (pgvector:5432) — these host port mappings MUST exist or the endpoints
+# are unreachable from outside; adding an L4 host on a new port in the
+# panel requires adding the matching mapping here and redeploying.
 
 services:
   caddy:
-    image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel
+    image: ghcr.io/alexzedim/caddy-proxy-manager-caddy:1.13.3-selectel.2
     pull_policy: if_not_present
     container_name: cmnw-caddy
     restart: always
@@ -33,6 +39,8 @@ services:
       - "80:80/udp"
       - "443:443"
       - "443:443/udp"
+      - "25432:25432"
+      - "25433:25433"
     volumes:
       - caddy-data:/data
       - caddy-config:/config
@@ -44,7 +52,7 @@ services:
       - routing-internal
 
   caddy-manager:
-    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel
+    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel.2
     pull_policy: if_not_present
     container_name: cmnw-caddy-manager
     restart: always
