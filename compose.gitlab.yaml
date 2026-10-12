@@ -15,11 +15,13 @@ services:
       - git_logs:/var/log/gitlab
     environment:
       GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD}
-      GITLAB_OMNIBUS_CONFIG: |
-        gitlab_rails['monitoring_whitelist'] = ['127.0.0.0/8', '::1/128', '172.16.0.0/12', '10.0.0.0/8', '192.168.0.0/16']
     networks:
       - cmnw
 
+  # SSH relay for GitLab: host 2222 -> gitlab:22 (replaces the former nginx
+  # stream block in the routing stack). gitlab.rb already sets
+  # gitlab_shell_ssh_port = 2222, so clone URLs stay correct. socat hides the
+  # real client IP from gitlab sshd — accepted trade-off.
   gitlab-ssh:
     image: alpine/socat:1.8.0.1
     container_name: gitlab-ssh
