@@ -94,6 +94,11 @@ services:
     image: registry.cmnw.ru/ai-platform/wiki:exp
     container_name: wiki
     restart: unless-stopped
+    # The merged stack.env carries the backend's PORT/HOST — docmost would
+    # obey them; inline environment wins over env_file, pin its listener.
+    environment:
+      HOST: 0.0.0.0
+      PORT: '3000'
     ports:
       - '128.0.0.255:2054:3000'
     env_file:
