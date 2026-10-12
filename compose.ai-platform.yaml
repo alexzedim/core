@@ -15,6 +15,11 @@
 # (oraculum stack), MinIO :9000 (region russia-1), rabbitmq :5672 (vhost
 # ai-platform), loki :3100. Public hosts (caddy edge): ai-documents.cmnw.ru
 # → :2051, wiki.cmnw.ru → :2054, s3.cmnw.ru → :9000. Host ports are one tight batch: 2050 backend, 2051 frontend, 2052 worker, 2053 indexator, 2054 wiki.
+#
+# The frontend nginx confs are NOT mounted from this repo: Portainer git
+# stacks pre-create empty mountpoint dirs for repo-relative bind paths, so
+# ./ai-platform/*.conf can never mount as files. They live on the host at
+# /srv/docker/ai-platform/ instead (seeded from git; update both copies).
 # ============================================================================
 name: 'ai-platform'
 
@@ -85,8 +90,8 @@ services:
     env_file:
       - stack.env
     volumes:
-      - ./ai-platform/web-nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ai-platform/web-nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /srv/docker/ai-platform/web-nginx.conf:/etc/nginx/nginx.conf:ro
+      - /srv/docker/ai-platform/web-nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - cmnw
 
