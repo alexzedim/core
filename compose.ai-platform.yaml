@@ -1,0 +1,112 @@
+# ============================================================================
+# ai-platform lab — ai-documents (backend/worker/indexator + frontend) + wiki
+# ============================================================================
+# Deployed as a Portainer Repository stack (this repo, master). Env values
+# never live in this public repo: they come from the Portainer stack env,
+# kept in sync with ../envs/ai-platform/.stack.env (see .env.example).
+#
+# Images: the rolling :exp aliases — "Update the stack" with re-pull always
+# deploys the newest exp build of every repo. For a rollback, temporarily
+# pin a specific v{ver}-exp.{sha} tag (the registry keeps the 2 newest per
+# repo). One unified backend image serves all three roles via APP_NAME.
+#
+# Reuses host services (no own DB/redis/broker): postgres :5432 (core,
+# databases ai-documents-dev + wiki), redis :6379 db 5, lightrag :9621
+# (oraculum stack), MinIO :9000 (region russia-1), rabbitmq :5672 (vhost
+# ai-platform), loki :3100. Public hosts (caddy edge): ai-documents.cmnw.ru
+# → :2051, wiki.cmnw.ru → :4000, s3.cmnw.ru → :9000.
+# ============================================================================
+name: 'ai-platform'
+
+services:
+  ai-documents-backend:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    container_name: ai-documents-backend
+    restart: unless-stopped
+    ports:
+      - '128.0.0.255:2050:2050'
+    env_file:
+      - stack.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${PORT:-2050}/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    networks:
+      - cmnw
+
+  ai-documents-worker:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    container_name: ai-documents-worker
+    restart: unless-stopped
+    environment:
+      APP_NAME: worker
+      WORKER_PORT: 3100
+    ports:
+      - '128.0.0.255:2052:3100'
+    env_file:
+      - stack.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${WORKER_PORT:-3100}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    networks:
+      - cmnw
+
+  ai-documents-indexator:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    container_name: ai-documents-indexator
+    restart: unless-stopped
+    environment:
+      APP_NAME: indexator
+      INDEXATOR_PORT: 3101
+    ports:
+      - '128.0.0.255:2053:3101'
+    env_file:
+      - stack.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${INDEXATOR_PORT:-3101}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    networks:
+      - cmnw
+
+  ai-documents-frontend:
+    image: registry.cmnw.ru/ai-platform/ai-documents-frontend:exp
+    container_name: ai-documents-frontend
+    restart: always
+    ports:
+      - '128.0.0.255:2051:8080'
+    env_file:
+      - stack.env
+    volumes:
+      - ./ai-platform/web-nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ai-platform/web-nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - cmnw
+
+  wiki:
+    image: registry.cmnw.ru/ai-platform/wiki:exp
+    container_name: wiki
+    restart: unless-stopped
+    ports:
+      - '128.0.0.255:4000:3000'
+    env_file:
+      - stack.env
+    volumes:
+      - wiki_storage:/app/data/storage
+    networks:
+      - cmnw
+
+volumes:
+  wiki_storage:
+    name: ai_platform_wiki_storage
+
+networks:
+  cmnw:
+    external: true
