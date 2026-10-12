@@ -26,15 +26,17 @@ chmod 644 "$CRT"
 gitlab-ctl restart puma
 gitlab-ctl restart registry
 i=0
-while [ $i -lt 30 ]; do
+while [ $i -lt 40 ]; do
     code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5100/v2/ || true)
-    [ "$code" = "401" ] && break
+    # /jwt/auth goes through puma: 401 (warm, anonymous) vs 502/000 (cold).
+    jwt=$(curl -s -o /dev/null -w '%{http_code}' 'https://gitlab.cmnw.ru/jwt/auth?service=container_registry&scope=repository:test:pull' || true)
+    [ "$code" = "401" ] && [ "$jwt" = "401" ] && break
     sleep 2
     i=$((i + 1))
 done
-if [ "$code" = "401" ]; then
-    echo "registry auth keypair restored; /v2/ answers 401 (healthy)"
+if [ "$code" = "401" ] && [ "$jwt" = "401" ]; then
+    echo "registry auth keypair restored; /v2/ and /jwt/auth answer 401 (healthy)"
 else
-    echo "WARNING: /v2/ did not come up (last code: $code)" >&2
+    echo "WARNING: registry did not come up (/v2/: $code, /jwt/auth: $jwt)" >&2
     exit 1
 fi
