@@ -67,7 +67,7 @@ services:
       - gateway-adguard:/var/lib/adguardvpn:rw
 
   lightrag:
-    image: ghcr.io/alexzedim/lightrag:v1.5.7-exp.d5e8da4f
+    image: registry.cmnw.ru/ai-platform/lightrag:exp
     pull_policy: if_not_present
     container_name: lightrag
     restart: always
