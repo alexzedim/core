@@ -81,17 +81,25 @@ services:
       POSTGRES_USER: ${LIGHTRAG_PG_USER}
       POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
       POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0
-      RABBITMQ_URL: amqp://${RABBIT_USER}:${RABBIT_PASSWORD}@${RABBIT_HOST}:${RABBIT_PORT}/${RABBIT_VHOST}
-      LLM_BINDING: openai
-      EMBEDDING_BINDING: openai
-      RERANK_BINDING: cohere
-      LIGHTRAG_KV_STORAGE: PGKVStorage
-      LIGHTRAG_VECTOR_STORAGE: PGVectorStorage
-      LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage
-      LIGHTRAG_GRAPH_STORAGE: PGTableGraphStorage
-      PORT: 8084
-      WORKERS: '1'
+    networks:
+      - oraculum
+    security_opt:
+      - no-new-privileges:true
+
+  lightrag-worker:
+    image: registry.cmnw.ru/ai-platform/lightrag:dev
+    pull_policy: if_not_present
+    container_name: lightrag-worker
+    restart: always
+    command: ['python', '-m', 'lightrag.worker']
+    env_file:
+      - stack.env
+    environment:
+      POSTGRES_HOST: ${LIGHTRAG_PG_HOST}
+      POSTGRES_PORT: ${LIGHTRAG_PG_PORT}
+      POSTGRES_USER: ${LIGHTRAG_PG_USER}
+      POSTGRES_PASSWORD: ${LIGHTRAG_PG_PASSWORD}
+      POSTGRES_DATABASE: ${LIGHTRAG_PG_DB}
     networks:
       - oraculum
     security_opt:
