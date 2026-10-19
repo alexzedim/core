@@ -24,6 +24,13 @@
 # conf.d/default.conf) lives in the external volume ai_platform_nginx_conf,
 # seeded once from the running image + this repo; reseed the same way after
 # changing the confs.
+#
+# env_file is required:false on purpose: Portainer CE 2.45 validates the
+# compose file (compose-go) for every NON-admin redeploy right after the
+# fresh clone, BEFORE the deployer writes stack.env (admin redeploys skip
+# that validation), so a plain `- stack.env` fails with "env file ... not
+# found". The deployer writes stack.env from the stack env at deploy time;
+# required:false only lets validation pass while the file is not there yet.
 # ============================================================================
 name: 'ai-platform'
 
@@ -35,7 +42,8 @@ services:
     ports:
       - '128.0.0.255:2050:2050'
     env_file:
-      - stack.env
+      - path: stack.env
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${PORT:-2050}/api/v1/health || exit 1"]
       interval: 30s
@@ -55,7 +63,8 @@ services:
     ports:
       - '128.0.0.255:2052:3100'
     env_file:
-      - stack.env
+      - path: stack.env
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${WORKER_PORT:-3100}/health || exit 1"]
       interval: 30s
@@ -75,7 +84,8 @@ services:
     ports:
       - '128.0.0.255:2053:3101'
     env_file:
-      - stack.env
+      - path: stack.env
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${INDEXATOR_PORT:-3101}/health || exit 1"]
       interval: 30s
@@ -92,7 +102,8 @@ services:
     ports:
       - '128.0.0.255:2051:8080'
     env_file:
-      - stack.env
+      - path: stack.env
+        required: false
     volumes:
       - ai_platform_nginx_conf:/etc/nginx:ro
     networks:
@@ -110,7 +121,8 @@ services:
     ports:
       - '128.0.0.255:2054:3000'
     env_file:
-      - stack.env
+      - path: stack.env
+        required: false
     volumes:
       - wiki_storage:/app/data/storage
     networks:
