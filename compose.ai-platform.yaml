@@ -5,10 +5,11 @@
 # never live in this public repo: they come from the Portainer stack env,
 # kept in sync with ../envs/ai-platform/.stack.env (see .env.example).
 #
-# Images: the rolling :exp aliases — "Update the stack" with re-pull always
-# deploys the newest exp build of every repo. For a rollback, temporarily
-# pin a specific v{ver}-exp.{sha} tag (the registry keeps the 2 newest per
-# repo). One unified backend image serves all three roles via APP_NAME.
+# Images: the rolling :dev aliases — "Update the stack" with re-pull always
+# deploys the newest dev build of every repo (every push to the repos' dev
+# branch produces a build). For a rollback, temporarily pin a specific
+# v{ver}-dev.{sha} tag (the registry keeps the 2 newest per repo). One
+# unified backend image serves all three roles via APP_NAME.
 #
 # Reuses host services (no own DB/redis/broker): postgres :5432 (core,
 # databases ai-documents-dev + wiki), redis :6379 db 5, lightrag :9621
@@ -28,7 +29,7 @@ name: 'ai-platform'
 
 services:
   ai-documents-backend:
-    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
     container_name: ai-documents-backend
     restart: unless-stopped
     ports:
@@ -45,7 +46,7 @@ services:
       - cmnw
 
   ai-documents-worker:
-    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
     container_name: ai-documents-worker
     restart: unless-stopped
     environment:
@@ -65,7 +66,7 @@ services:
       - cmnw
 
   ai-documents-indexator:
-    image: registry.cmnw.ru/ai-platform/ai-documents-backend:exp
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
     container_name: ai-documents-indexator
     restart: unless-stopped
     environment:
@@ -85,7 +86,7 @@ services:
       - cmnw
 
   ai-documents-frontend:
-    image: registry.cmnw.ru/ai-platform/ai-documents-frontend:exp
+    image: registry.cmnw.ru/ai-platform/ai-documents-frontend:dev
     container_name: ai-documents-frontend
     restart: always
     ports:
@@ -98,7 +99,7 @@ services:
       - cmnw
 
   wiki:
-    image: registry.cmnw.ru/ai-platform/wiki:exp
+    image: registry.cmnw.ru/ai-platform/wiki:dev
     container_name: wiki
     restart: unless-stopped
     # The merged stack.env carries the backend's PORT/HOST — docmost would
