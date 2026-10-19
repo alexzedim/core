@@ -11,6 +11,7 @@ services:
     environment:
       NODE_ENV: production
       APP_NAME: indexator
+      LIGHTRAG_URL: http://lightrag:8084
     networks:
       - oraculum
 
