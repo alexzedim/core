@@ -1,7 +1,7 @@
 name: 'oraculum'
 services:
   indexator:
-    image: ghcr.io/alexzedim/indexator:v1.1.11
+    image: ghcr.io/alexzedim/indexator:latest
     pull_policy: if_not_present
     container_name: indexator
     restart: always
