@@ -28,7 +28,7 @@ services:
       APP_NAME: oracular
       HTTP_PROXY: http://128.0.0.255:3128
       HTTPS_PROXY: http://128.0.0.255:3128
-      NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis
+      NO_PROXY: localhost,127.0.0.1,128.0.0.255,oraculum,indexator,archivum,lightrag,gateway,rabbitmq,redis,api.neuraldeep.ru
     networks:
       - oraculum
 
