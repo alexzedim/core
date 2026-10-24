@@ -107,7 +107,7 @@ services:
       - socket-proxy
 
   cert-sync:
-    image: ghcr.io/alexzedim/cert-sync:1.0.0
+    image: ghcr.io/alexzedim/cert-sync:1.1.0
     container_name: cmnw-cert-sync
     restart: always
     pull_policy: if_not_present
@@ -122,6 +122,9 @@ services:
       - CPM_BASE_URL=http://cmnw-caddy-manager:3000
       - CPM_API_TOKEN=${CPM_API_TOKEN}
       - CPM_CERT_NAME=${CERT_SYNC_CERT_NAME:-cmnw.ru}
+      - AGH_TLS_DIR=/agh-tls
+    volumes:
+      - /srv/docker/adguard/tls:/agh-tls
     networks:
       - routing-internal
 
