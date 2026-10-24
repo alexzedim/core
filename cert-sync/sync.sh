@@ -1,11 +1,11 @@
 #!/bin/bash
 # cert-sync — pull the cmnw.ru certificate from Selectel Certificate Manager
-# and upsert it into caddy-proxy-manager via its REST API.
+# and deliver it to two consumers: caddy-proxy-manager (REST API upsert) and,
+# since 1.1.0, the AdGuard Home DoT server (cert.pem/key.pem in AGH_TLS_DIR).
 #
 # Selectel renews the cert itself (Let's Encrypt DNS-01, the zone lives on
-# Selectel DNS); this script only delivers the current material to the panel,
-# which in turn pushes it to Caddy. Runs once at container start, then on a
-# cron schedule (busybox crond).
+# Selectel DNS); this script only delivers the current material. Runs once at
+# container start, then on a cron schedule (busybox crond).
 #
 # Selectel auth: the Certificate Manager API does NOT accept static API keys —
 # it requires a Keystone (Identity v3) project token. We authenticate as a
@@ -24,6 +24,12 @@
 #   CRON_SCHEDULE       cron expression        (default "0 6 * * *")
 #   CPM_CERT_FIELD / CPM_KEY_FIELD  JSON field names in the panel API
 #                                   (defaults certificate / privateKey)
+#   AGH_TLS_DIR         when set, cert.pem/key.pem are also written there
+#                       (atomic rename, 644/600) for the AdGuard Home DoT
+#                       server; AGH reloads cert files on change by itself
+#   RETRY_ATTEMPTS      transient-failure retries per remote call (default 4)
+#   RETRY_BACKOFF       first backoff step in seconds, doubles each attempt
+#                       (default 15 -> 15/30/60)
 #   DEBUG=1             dump raw API bodies on decode failures
 
 set -euo pipefail
@@ -40,6 +46,9 @@ CRON_SCHEDULE="${CRON_SCHEDULE:-0 6 * * *}"
 CPM_CERT_FIELD="${CPM_CERT_FIELD:-certificatePem}"
 CPM_KEY_FIELD="${CPM_KEY_FIELD:-privateKeyPem}"
 CPM_DOMAINS="${CPM_DOMAINS:-cmnw.ru,*.cmnw.ru}"
+AGH_TLS_DIR="${AGH_TLS_DIR:-}"
+RETRY_ATTEMPTS="${RETRY_ATTEMPTS:-4}"
+RETRY_BACKOFF="${RETRY_BACKOFF:-15}"
 IDENTITY_URL="https://cloud.api.selcloud.ru/identity/v3/auth/tokens"
 CERT_API="https://cloud.api.selcloud.ru/certificate-manager/v1/cert/${SELECTEL_CERT_ID}"
 STATE_DIR="/var/lib/cert-sync"
@@ -49,7 +58,29 @@ log()  { echo "[cert-sync $(date -Is)] $*"; }
 warn() { echo "[cert-sync $(date -Is)] WARNING: $*" >&2; }
 die()  { echo "[cert-sync $(date -Is)] ERROR: $*" >&2; exit 1; }
 
-# Keystone project token via the service user. Returns the X-Subject-Token.
+# Run "$@" up to RETRY_ATTEMPTS times with doubling backoff. Container DNS
+# blips (the resolver it points at restarting) and one-off 5xx must heal
+# within a run instead of waiting for the next daily cron fire. The wrapped
+# command's stdout passes through on success; diagnostics go to stderr.
+with_retries() {  # $1 = label, rest = command
+    local label="$1"; shift
+    local attempt=1 delay="$RETRY_BACKOFF" rc
+    while true; do
+        if "$@"; then return 0; fi
+        rc=$?
+        if [ "$attempt" -ge "$RETRY_ATTEMPTS" ]; then
+            warn "$label failed after $attempt attempts (last rc=$rc)"
+            return "$rc"
+        fi
+        warn "$label failed (rc=$rc), retry $((attempt + 1))/$RETRY_ATTEMPTS in ${delay}s"
+        sleep "$delay"
+        attempt=$((attempt + 1))
+        delay=$((delay * 2))
+    done
+}
+
+# Keystone project token via the service user. Returns the X-Subject-Token
+# on stdout, non-zero exit on failure (caller decides whether to retry/die).
 get_selectel_token() {
     local body resp_token
     body="$(jq -n \
@@ -63,8 +94,8 @@ get_selectel_token() {
         -d "$body" \
         -D - -o /dev/null \
         "$IDENTITY_URL" | tr -d '\r' | awk 'tolower($1)=="x-subject-token:"{print $2}')" \
-        || die "Selectel identity auth failed"
-    [ -n "$resp_token" ] || die "Selectel identity auth returned no X-Subject-Token"
+        || return 1
+    [ -n "$resp_token" ] || return 1
     printf '%s' "$resp_token"
 }
 
@@ -72,15 +103,32 @@ get_selectel_token() {
 fetch_selectel() {  # $1 = token, $2 = endpoint (ca_chain | private_key)
     curl -fsSL --max-time 60 \
         -H "X-Auth-Token: $1" \
-        "${CERT_API}/$2" \
-        || die "Selectel API call failed for $2"
+        "${CERT_API}/$2"
+}
+
+# Deliver the same material to the AdGuard Home DoT server. The dir is bind-
+# mounted ro into adguard-home; AGH reloads path-specified certs on change.
+write_agh_tls() {  # $1 = cert PEM, $2 = key PEM, $3 = fingerprint
+    local cert="$1" key="$2" fp="$3"
+    [ -f "$AGH_TLS_DIR/.fingerprint" ] && [ "$(cat "$AGH_TLS_DIR/.fingerprint")" = "$fp" ] && return 0
+    printf '%s\n' "$cert" > "$AGH_TLS_DIR/cert.pem.new"
+    printf '%s\n' "$key" > "$AGH_TLS_DIR/key.pem.new"
+    chmod 644 "$AGH_TLS_DIR/cert.pem.new"
+    chmod 600 "$AGH_TLS_DIR/key.pem.new"
+    mv "$AGH_TLS_DIR/cert.pem.new" "$AGH_TLS_DIR/cert.pem"
+    mv "$AGH_TLS_DIR/key.pem.new" "$AGH_TLS_DIR/key.pem"
+    printf '%s' "$fp" > "$AGH_TLS_DIR/.fingerprint"
+    log "AGH TLS material updated in $AGH_TLS_DIR"
 }
 
 sync_once() {
     local token cert key fingerprint panel_json cert_id
-    token="$(get_selectel_token)"
-    cert="$(fetch_selectel "$token" ca_chain)"
-    key="$(fetch_selectel "$token" private_key)"
+    token="$(with_retries "selectel auth" get_selectel_token)" \
+        || die "Selectel identity auth failed"
+    cert="$(with_retries "selectel ca_chain" fetch_selectel "$token" ca_chain)" \
+        || die "Selectel API call failed for ca_chain"
+    key="$(with_retries "selectel private_key" fetch_selectel "$token" private_key)" \
+        || die "Selectel API call failed for private_key"
 
     [[ "$cert" == *"BEGIN CERTIFICATE"* ]] || die "ca_chain is not a PEM certificate"
     [[ "$key"  == *"PRIVATE KEY"*       ]] || die "private_key is not a PEM key"
@@ -97,6 +145,13 @@ sync_once() {
     if [ -f "$FINGERPRINT_FILE" ] && [ "$(cat "$FINGERPRINT_FILE")" = "$fingerprint" ]; then
         log "certificate unchanged (fingerprint ${fingerprint:0:16}…), nothing to do"
         return 0
+    fi
+
+    # AGH delivery goes first on purpose: it must not depend on panel health.
+    # The global fingerprint is only saved after the panel upsert succeeds, so
+    # a failed panel call still retries both paths on the next run.
+    if [ -n "$AGH_TLS_DIR" ]; then
+        write_agh_tls "$cert" "$key" "$fingerprint"
     fi
 
     panel_json="$(curl -fsSL --max-time 30 \
