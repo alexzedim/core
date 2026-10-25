@@ -1,4 +1,4 @@
-# AdGuard Home (LAN DNS 128.0.0.255:53, DoT/DoQ server on :853 serving
+# AdGuard Home (LAN DNS 128.0.0.255:53 + HE-v6, DoT server on :853 serving
 # adguard.cmnw.ru, UI :3300 -> https://adguard.cmnw.ru) + AdGuard VPN
 # gateways (vpn-oracle*). Scraper apps in compose.oracle.yaml join the
 # gateways' netns cross-stack. Deploy this stack BEFORE oracle.
@@ -13,7 +13,10 @@ services:
         ports:
             - '128.0.0.255:53:53/udp'
             - '128.0.0.255:53:53/tcp'
+            - '[2001:470:28:284:2036:4dff:fe08:c6d3]:53:53/udp'
+            - '[2001:470:28:284:2036:4dff:fe08:c6d3]:53:53/tcp'
             - '128.0.0.255:853:853/tcp'
+            - '[2001:470:28:284:2036:4dff:fe08:c6d3]:853:853/tcp'
             - '128.0.0.255:3300:3000/tcp'
         volumes:
             - /srv/docker/adguard/conf:/opt/adguardhome/conf
