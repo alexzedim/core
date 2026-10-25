@@ -1,0 +1,16 @@
+# CoreDNS — offline DNS snapshot server (AGH fallback upstream).
+# Serves A/AAAA from /etc/coredns/hosts.txt (generated daily by
+# /usr/local/bin/dns-snapshot.sh from the postgres dns.dns_snapshot table).
+# Misses and unsupported qtypes MUST stay SERVFAIL (never NXDOMAIN) so the
+# answer never poisons real resolution — see AGENTS "DNS autonomy snapshot".
+# Repo copy: deploy to /srv/docker/dns-snapshot/Corefile.
+.:5353 {
+    errors
+    hosts /etc/coredns/hosts.txt {
+        ttl 30
+        reload 30s
+        no_reverse
+        fallthrough
+        fallthrough_unsupported
+    }
+}

@@ -3,6 +3,9 @@
 # gateways (vpn-oracle*). Scraper apps in compose.oracle.yaml join the
 # gateways' netns cross-stack. Deploy this stack BEFORE oracle.
 # The :853 publish + tls volume MUST stay or the Keenetic DoT upstream dies.
+# dns-snapshot (CoreDNS :5353, stack-internal) serves the offline snapshot
+# from /srv/docker/dns-snapshot as the AGH fallback upstream — see AGENTS.md
+# "DNS autonomy snapshot".
 # See AGENTS.md "AdGuard - Home + VPN fleet" for volumes/SOCKS/watchdog.
 
 services:
@@ -22,6 +25,21 @@ services:
             - /srv/docker/adguard/conf:/opt/adguardhome/conf
             - /srv/docker/adguard/tls:/opt/adguardhome/tls:ro
             - /srv/docker/adguard/work:/opt/adguardhome/work
+        extra_hosts:
+            - dns.sb:185.222.222.222
+            - dns.quad9.net:9.9.9.9
+            - d.adguard-dns.com:94.140.14.14
+
+    dns-snapshot:
+        image: coredns/coredns:1.15.0
+        container_name: dns-snapshot
+        restart: always
+        command: ['-conf', '/etc/coredns/Corefile']
+        ports:
+            - '128.0.0.255:5353:5353/udp'
+            - '128.0.0.255:5353:5353/tcp'
+        volumes:
+            - /srv/docker/dns-snapshot:/etc/coredns:ro
 
     vpn-oracle:
         image: ghcr.io/alexzedim/adguard:latest
