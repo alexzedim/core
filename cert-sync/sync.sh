@@ -192,11 +192,12 @@ sync_once() {
     fi
 
     # Best-effort nudge so the panel re-renders config immediately; the panel
-    # also reacts to certificate changes on its own.
+    # also reacts to certificate changes on its own. /api/v1/caddy/sync 404'd
+    # in this panel build — the correct push endpoint is /api/v1/caddy/apply.
     curl -fsS -o /dev/null --max-time 30 \
         -X POST -H "Authorization: Bearer ${CPM_API_TOKEN}" \
-        "${CPM_BASE_URL}/api/v1/caddy/sync" \
-        || warn "panel /api/v1/caddy/sync nudge failed (non-fatal)"
+        "${CPM_BASE_URL}/api/v1/caddy/apply" \
+        || warn "panel /api/v1/caddy/apply nudge failed (non-fatal)"
 
     mkdir -p "$STATE_DIR"
     printf '%s' "$fingerprint" > "$FINGERPRINT_FILE"
