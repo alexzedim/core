@@ -106,8 +106,8 @@ services:
       - routing-internal
       - socket-proxy
 
-    cert-sync:
-        image: ghcr.io/alexzedim/cert-sync:1.1.1
+  cert-sync:
+    image: ghcr.io/alexzedim/cert-sync:1.1.1
     container_name: cmnw-cert-sync
     restart: always
     pull_policy: if_not_present
