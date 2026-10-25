@@ -53,6 +53,7 @@ WARP.md
 *.md
 !README.md
 !AGENTS.md
+AGENTS-LOCAL.md
 
 # IDE - VSCode
 .vscode/*
