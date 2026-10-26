@@ -19,6 +19,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: cmnw-runner-I
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - cmnw-runner-work:/tmp/runner/work
@@ -44,6 +47,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: cmnw-runner-II
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - cmnw-runner-work:/tmp/runner/work
@@ -70,6 +76,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: cmnw-runner-III
       RUNNER_LABELS: docker,linux,self-hosted,cmnw
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - cmnw-runner-work:/tmp/runner/work
@@ -96,6 +105,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: core-runner-I
       RUNNER_LABELS: docker,linux,self-hosted,core
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - core-runner-work:/tmp/runner/work
@@ -120,6 +132,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: oraculum-runner-I
       RUNNER_LABELS: docker,linux,self-hosted,oraculum
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - oraculum-runner-work:/tmp/runner/work
@@ -136,6 +151,9 @@ services:
       ACCESS_TOKEN: ${GITHUB_TOKEN}
       RUNNER_NAME: oraculum-runner-II
       RUNNER_LABELS: docker,linux,self-hosted,oraculum
+      HTTP_PROXY: http://128.0.0.255:3128
+      HTTPS_PROXY: http://128.0.0.255:3128
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - oraculum-runner-work:/tmp/runner/work
