@@ -31,6 +31,8 @@ services:
             - dns.sb:185.222.222.222
             - dns.quad9.net:9.9.9.9
             - d.adguard-dns.com:94.140.14.14
+            - freedns.controld.com:76.76.2.11
+            - wikimedia-dns.org:185.71.138.138
 
     dns-snapshot:
         image: coredns/coredns:1.15.0
