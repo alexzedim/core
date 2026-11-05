@@ -3,8 +3,9 @@ name: 'analytics'
 # Monitoring stack: Prometheus + Grafana + Loki + Promtail + exporters.
 #
 # Config files are HOST bind mounts, not inline `configs:` blocks: canonical
-# copies live in the repo (prometheus/prometheus.yml, loki/loki-config.yaml)
-# and are deployed to /srv/docker/analytics/ on the host. Bearer tokens for
+# copies live in the repo (prometheus/prometheus.yml, loki/loki-config.yaml,
+# grafana/alerting/dns-rules.yaml) and are deployed to /srv/docker/analytics/
+# on the host. Bearer tokens for
 # the MinIO and Home Assistant scrape targets are mounted as files
 # (/srv/docker/analytics/{minio,hass}.token) and referenced via
 # `credentials_file` — compose interpolation of `${VAR}` does not happen
@@ -91,6 +92,7 @@ services:
             - '3000:3000'
         volumes:
             - grafana:/var/lib/grafana
+            - /srv/docker/analytics/grafana-provisioning-alerting:/etc/grafana/provisioning/alerting:ro
         networks:
             - loki
             - cmnw

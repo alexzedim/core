@@ -1,0 +1,170 @@
+# DNS alert rules for Grafana (provisioned, evaluated against Loki).
+# Canonical repo copy: deploy to /srv/docker/analytics/grafana-provisioning-alerting/
+# and redeploy the analytics stack (the bind is declared in compose.analytics.yaml).
+# Label-only queries by design: the plaintext/snapshot/fallback taxonomy is
+# produced by the host-side dns-flow-logger feeder, and health checks by
+# dns-health-feeder. The datasource UID below matches the provisioned-at-first-boot
+# Loki datasource in the grafana volume.
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: dns
+      folder: ''
+      interval: 1m
+      rules:
+        - uid: dns-plaintext-upstream
+          title: DNS plaintext upstream in use
+          condition: C
+          for: 5m
+          noDataState: OK
+          execErrState: Error
+          annotations:
+              summary: Queries are being resolved via a plaintext upstream (the provider can see house DNS traffic)
+          labels:
+              severity: critical
+          data:
+            - refId: A
+              relativeTimeRange:
+                  from: 600
+                  to: 0
+              datasourceUid: ff1y5ncv661oga
+              model:
+                  datasource:
+                      type: loki
+                      uid: ff1y5ncv661oga
+                  expr: 'sum(count_over_time({app="dns",upstream="plain"}[5m]))'
+                  queryType: instant
+                  refId: A
+            - refId: C
+              relativeTimeRange:
+                  from: 0
+                  to: 0
+              datasourceUid: __expr__
+              model:
+                  conditions:
+                    - evaluator:
+                          type: gt
+                          params:
+                            - 0
+                      operator:
+                          type: and
+                      query:
+                          params:
+                            - C
+                      reducer:
+                          params: []
+                          type: last
+                      type: query
+                  datasource:
+                      name: Expression
+                      type: __expr__
+                      uid: __expr__
+                  expression: A
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  type: threshold
+              refId: C
+        - uid: dns-snapshot-collapse
+          title: DNS snapshot serving non-pinned queries (main pool collapsed)
+          condition: C
+          for: 10m
+          noDataState: OK
+          execErrState: Error
+          annotations:
+              summary: The offline snapshot is answering queries that are not pinned to it, meaning every DoH upstream is failing
+          labels:
+              severity: critical
+          data:
+            - refId: A
+              relativeTimeRange:
+                  from: 600
+                  to: 0
+              datasourceUid: ff1y5ncv661oga
+              model:
+                  datasource:
+                      type: loki
+                      uid: ff1y5ncv661oga
+                  expr: 'sum(count_over_time({app="dns",locality="snapshot"}[10m]))'
+                  queryType: instant
+                  refId: A
+            - refId: C
+              relativeTimeRange:
+                  from: 0
+                  to: 0
+              datasourceUid: __expr__
+              model:
+                  conditions:
+                    - evaluator:
+                          type: gt
+                          params:
+                            - 0
+                      operator:
+                          type: and
+                      query:
+                          params:
+                            - C
+                      reducer:
+                          params: []
+                          type: last
+                      type: query
+                  datasource:
+                      name: Expression
+                      type: __expr__
+                      uid: __expr__
+                  expression: A
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  type: threshold
+              refId: C
+        - uid: dns-health-check-fail
+          title: DNS self-check failing
+          condition: C
+          for: 10m
+          noDataState: NoData
+          execErrState: Error
+          annotations:
+              summary: dns-health-feeder reports a failing check (snapshot dead/stale, AGH pool ritual, or AGH API unreachable)
+          labels:
+              severity: warning
+          data:
+            - refId: A
+              relativeTimeRange:
+                  from: 600
+                  to: 0
+              datasourceUid: ff1y5ncv661oga
+              model:
+                  datasource:
+                      type: loki
+                      uid: ff1y5ncv661oga
+                  expr: 'sum(count_over_time({app="dns-health",state="fail"}[10m]))'
+                  queryType: instant
+                  refId: A
+            - refId: C
+              relativeTimeRange:
+                  from: 0
+                  to: 0
+              datasourceUid: __expr__
+              model:
+                  conditions:
+                    - evaluator:
+                          type: gt
+                          params:
+                            - 0
+                      operator:
+                          type: and
+                      query:
+                          params:
+                            - C
+                      reducer:
+                          params: []
+                          type: last
+                      type: query
+                  datasource:
+                      name: Expression
+                      type: __expr__
+                      uid: __expr__
+                  expression: A
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  type: threshold
+              refId: C
