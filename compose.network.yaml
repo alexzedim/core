@@ -10,7 +10,7 @@
 
 services:
     adguard-home:
-        image: adguard/adguardhome:v0.107.57
+        image: adguard/adguardhome:v0.107.80
         container_name: adguard-home
         restart: always
         ports:
