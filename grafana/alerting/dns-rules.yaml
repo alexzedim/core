@@ -9,7 +9,7 @@ apiVersion: 1
 groups:
     - orgId: 1
       name: dns
-      folder: ''
+      folder: General
       interval: 1m
       rules:
         - uid: dns-plaintext-upstream
