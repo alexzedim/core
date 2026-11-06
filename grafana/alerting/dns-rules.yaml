@@ -63,7 +63,6 @@ groups:
                   intervalMs: 1000
                   maxDataPoints: 43200
                   type: threshold
-              refId: C
         - uid: dns-snapshot-collapse
           title: DNS snapshot serving non-pinned queries (main pool collapsed)
           condition: C
@@ -115,7 +114,6 @@ groups:
                   intervalMs: 1000
                   maxDataPoints: 43200
                   type: threshold
-              refId: C
         - uid: dns-health-check-fail
           title: DNS self-check failing
           condition: C
@@ -167,4 +165,3 @@ groups:
                   intervalMs: 1000
                   maxDataPoints: 43200
                   type: threshold
-              refId: C
