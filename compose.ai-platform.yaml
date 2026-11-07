@@ -151,6 +151,7 @@ services:
       APP_NAME: skill-runner
       PORT: '2071'
       HEALTH_PATH: /api/v1/skill-runner/health
+      HEALTH_PATH: /api/v1/skill-runner/health
     ports:
       - '128.0.0.255:2171:2071'
     env_file:
@@ -167,6 +168,8 @@ services:
     restart: unless-stopped
     environment:
       APP_NAME: esb-orchestrator
+      PORT: '2061'
+      HEALTH_PATH: /api/v1/esb-orchestrator/health
       ESB_CODE_NODE_PACKAGES: pptxgenjs,jszip,@aws-sdk/client-s3,@aws-sdk/s3-request-presigner
       ESB_ARTIFACTS_BUCKET: esb-artifacts
       AWS_ENDPOINT_URL_S3: ${AWS_S3_ENDPOINT}
