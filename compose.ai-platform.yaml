@@ -109,6 +109,78 @@ services:
     networks:
       - cmnw
 
+  # Unified marketplace service (apps/marketplace): skills + esb + bundles
+  # control planes and the MCP gateway edge (routes /api/v1/skills*,
+  # /api/v1/esb*, /api/v1/bundles*, /mcp, /hooks). Runs ALL schema migration
+  # chains (skill/esb/bundle/marketplace) before boot. In-app gateway
+  # dispatch targets the control plane on the same listener.
+  ai-documents-marketplace:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
+    container_name: ai-documents-marketplace
+    restart: unless-stopped
+    environment:
+      APP_NAME: marketplace
+      ESB_CONTROL_URL: http://localhost:2070
+      PORT: '2070'
+      HEALTH_PATH: /api/v1/marketplace/health
+    ports:
+      - '128.0.0.255:2170:2070'
+      - '128.0.0.255:2162:2070'
+    env_file:
+      - path: stack.env
+        required: false
+    command:
+      - sh
+      - -c
+      - node dist/apps/marketplace/scripts/run-migrations.cjs && exec node --enable-source-maps dist/apps/marketplace/src/main
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${PORT:-2070}${HEALTH_PATH:-/api/v1/marketplace/health} || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+    networks:
+      - cmnw
+
+  # Skill sandbox runner: consumes skill.test-run (the Сандбокс test page).
+  ai-documents-skill-runner:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
+    container_name: ai-documents-skill-runner
+    restart: unless-stopped
+    environment:
+      APP_NAME: skill-runner
+      PORT: '2071'
+      HEALTH_PATH: /api/v1/skill-runner/health
+    ports:
+      - '128.0.0.255:2171:2071'
+    env_file:
+      - path: stack.env
+        required: false
+    networks:
+      - cmnw
+
+  # ESB orchestrator: consumes esb.run, executes pipeline DAGs (code nodes
+  # power the agent's create_presentation tool; artifacts -> esb-artifacts).
+  ai-documents-esb-orchestrator:
+    image: registry.cmnw.ru/ai-platform/ai-documents-backend:dev
+    container_name: ai-documents-esb-orchestrator
+    restart: unless-stopped
+    environment:
+      APP_NAME: esb-orchestrator
+      ESB_CODE_NODE_PACKAGES: pptxgenjs,jszip,@aws-sdk/client-s3,@aws-sdk/s3-request-presigner
+      ESB_ARTIFACTS_BUCKET: esb-artifacts
+      AWS_ENDPOINT_URL_S3: ${AWS_S3_ENDPOINT}
+      AWS_ACCESS_KEY_ID: ${AWS_S3_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_S3_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_S3_REGION}
+    ports:
+      - '128.0.0.255:2161:2061'
+    env_file:
+      - path: stack.env
+        required: false
+    networks:
+      - cmnw
+
   wiki:
     image: registry.cmnw.ru/ai-platform/wiki:dev
     container_name: wiki
