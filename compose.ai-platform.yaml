@@ -169,12 +169,8 @@ services:
       APP_NAME: esb-orchestrator
       PORT: '2061'
       HEALTH_PATH: /api/v1/esb-orchestrator/health
-      ESB_CODE_NODE_PACKAGES: pptxgenjs,jszip,@aws-sdk/client-s3,@aws-sdk/s3-request-presigner
+      ESB_CODE_NODE_PACKAGES: pptxgenjs,jszip,setimmediate,@aws-sdk/client-s3,@aws-sdk/s3-request-presigner
       ESB_ARTIFACTS_BUCKET: esb-artifacts
-      AWS_ENDPOINT_URL_S3: ${S3_PRESIGN_ENDPOINT}
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
-      AWS_REGION: ${S3_REGION}
     ports:
       - '128.0.0.255:2161:2061'
     env_file:
