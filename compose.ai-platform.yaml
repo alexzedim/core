@@ -134,7 +134,9 @@ services:
       - -c
       - node dist/apps/marketplace/scripts/run-migrations.cjs && exec node --enable-source-maps dist/apps/marketplace/src/main
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${PORT:-2070}${HEALTH_PATH:-/api/v1/marketplace/health} || exit 1"]
+      # $$ = container-runtime env (compose would otherwise interpolate ${PORT}
+      # at parse time from stack.env, where PORT=2050 is the backend's).
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${PORT:-2070}$${HEALTH_PATH:-/api/v1/marketplace/health} || exit 1"]
       interval: 30s
       timeout: 5s
       start_period: 90s
