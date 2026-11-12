@@ -1,14 +1,18 @@
-# Scraper apps joined to the vpn-oracle* gateways' netns (gateways live in
-# compose.network.yaml, stack 'network'). Deploy this stack AFTER any change
-# to the network stack; never restart a vpn-oracle* container alone.
-# See AGENTS.md "AdGuard - Home + VPN fleet".
+# Single oracle instance (Playwright variant) running DIRECT: own netns,
+# egress without a VPN gateway, ports published on the service itself
+# (login/status :6180, noVNC :6181, CDP :9321). The vpn-oracle* gateway
+# fleet (compose.network.yaml, stack 'network') and the five variants
+# below are parked behind the 'vpn' compose profile (COMPOSE_PROFILES=vpn).
+# To restore gateway mode for this service: deploy the network stack with
+# the profile first, drop this service's ports + GATEWAY_READINESS_MAX_ATTEMPTS
+# and re-join network_mode: 'container:vpn-oracle'. Never run 'down -v' —
+# the volumes hold Discord sessions.
 
 services:
     oracle:
         image: ghcr.io/alexzedim/oracle:latest
         pull_policy: if_not_present
         container_name: oracle
-        network_mode: 'container:vpn-oracle'
         restart: always
         env_file:
             - stack.env
@@ -17,11 +21,18 @@ services:
         environment:
             NODE_ENV: production
             APP_NAME: oracle
+            GATEWAY_READINESS_MAX_ATTEMPTS: '0'
+        ports:
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_LOGIN_PORT:-6180}:3000'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
+            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
         volumes:
             - oracle-secrets:/app/secrets:rw
             - oracle-geo:/var/lib/oraculum
 
     oracle-1d:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/oracle-1d:latest
         pull_policy: if_not_present
         container_name: oracle-1d
@@ -39,6 +50,8 @@ services:
             - oracle-1d-geo:/var/lib/oraculum
 
     oracle-2bd:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/oracle-2bd:latest
         pull_policy: if_not_present
         container_name: oracle-2bd
@@ -56,6 +69,8 @@ services:
             - oracle-2bd-geo:/var/lib/oraculum
 
     oracle-3s:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/oracle-3s:latest
         pull_policy: if_not_present
         container_name: oracle-3s
@@ -73,6 +88,8 @@ services:
             - oracle-3s-geo:/var/lib/oraculum
 
     oracle-4qr:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/oracle-4qr:latest
         pull_policy: if_not_present
         container_name: oracle-4qr
@@ -88,6 +105,8 @@ services:
             - oracle-4qr-geo:/var/lib/oraculum
 
     oracle-5se:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/oracle-5se:latest
         pull_policy: if_not_present
         container_name: oracle-5se

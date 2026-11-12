@@ -10,6 +10,12 @@
 # https://[2a09::]/dns-query upstream member; the joindns4 extra_hosts pin
 # backs the https://unfiltered.joindns4.eu/dns-query pool member.
 # See AGENTS.md "AdGuard - Home + VPN fleet" for volumes/SOCKS/watchdog.
+#
+# The six vpn-oracle* gateways are PARKED behind the 'vpn' compose profile
+# (COMPOSE_PROFILES=vpn): the oracle stack runs a single direct-egress
+# instance without a gateway. Restore: deploy this stack with the profile
+# enabled, then re-point the oracle service in compose.oracle.yaml to
+# network_mode: 'container:vpn-oracle' and drop its ports.
 
 services:
     adguard-home:
@@ -53,6 +59,8 @@ services:
             - /srv/docker/dns-snapshot:/etc/coredns:ro
 
     vpn-oracle:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle
@@ -84,6 +92,8 @@ services:
             - oraculum
 
     vpn-oracle-1d:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle-1d
@@ -115,6 +125,8 @@ services:
             - oraculum
 
     vpn-oracle-2bd:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle-2bd
@@ -146,6 +158,8 @@ services:
             - oraculum
 
     vpn-oracle-3s:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle-3s
@@ -177,6 +191,8 @@ services:
             - oraculum
 
     vpn-oracle-4qr:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle-4qr
@@ -207,6 +223,8 @@ services:
             - oraculum
 
     vpn-oracle-5se:
+        profiles:
+            - vpn
         image: ghcr.io/alexzedim/adguard:latest
         pull_policy: if_not_present
         container_name: vpn-oracle-5se
