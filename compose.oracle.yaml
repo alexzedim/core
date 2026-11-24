@@ -1,12 +1,7 @@
 # Single oracle instance (Playwright variant) running DIRECT: own netns,
 # egress without a VPN gateway, ports published on the service itself
-# (login/status :6180, noVNC :6181, CDP :9321). The vpn-oracle* gateway
-# fleet (compose.network.yaml, stack 'network') and the five variants
-# below are parked behind the 'vpn' compose profile (COMPOSE_PROFILES=vpn).
-# To restore gateway mode for this service: deploy the network stack with
-# the profile first, drop this service's ports + GATEWAY_READINESS_MAX_ATTEMPTS
-# and re-join network_mode: 'container:vpn-oracle'. Never run 'down -v' —
-# the volumes hold Discord sessions.
+# (login/status :6180, noVNC :6181, CDP :9321). Never run 'down -v' — the
+# volumes hold Discord sessions.
 
 services:
     oracle:
@@ -30,108 +25,6 @@ services:
             - oracle-secrets:/app/secrets:rw
             - oracle-geo:/var/lib/oraculum
 
-    oracle-1d:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/oracle-1d:latest
-        pull_policy: if_not_present
-        container_name: oracle-1d
-        network_mode: 'container:vpn-oracle-1d'
-        restart: always
-        env_file:
-            - stack.env
-        shm_size: '1gb'
-        command: ['node', 'dist/apps/oracle-1d/src/main.js']
-        environment:
-            NODE_ENV: production
-            APP_NAME: oracle-1d
-        volumes:
-            - oracle-1d-secrets:/app/secrets:rw
-            - oracle-1d-geo:/var/lib/oraculum
-
-    oracle-2bd:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/oracle-2bd:latest
-        pull_policy: if_not_present
-        container_name: oracle-2bd
-        network_mode: 'container:vpn-oracle-2bd'
-        restart: always
-        env_file:
-            - stack.env
-        shm_size: '1gb'
-        command: ['node', 'dist/apps/oracle-2bd/src/main.js']
-        environment:
-            NODE_ENV: production
-            APP_NAME: oracle-2bd
-        volumes:
-            - oracle-2bd-secrets:/app/secrets:rw
-            - oracle-2bd-geo:/var/lib/oraculum
-
-    oracle-3s:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/oracle-3s:latest
-        pull_policy: if_not_present
-        container_name: oracle-3s
-        network_mode: 'container:vpn-oracle-3s'
-        restart: always
-        env_file:
-            - stack.env
-        shm_size: '1gb'
-        command: ['node', 'dist/apps/oracle-3s/src/main.js']
-        environment:
-            NODE_ENV: production
-            APP_NAME: oracle-3s
-        volumes:
-            - oracle-3s-secrets:/app/secrets:rw
-            - oracle-3s-geo:/var/lib/oraculum
-
-    oracle-4qr:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/oracle-4qr:latest
-        pull_policy: if_not_present
-        container_name: oracle-4qr
-        network_mode: 'container:vpn-oracle-4qr'
-        restart: always
-        env_file:
-            - stack.env
-        command: ['node', 'dist/apps/oracle-4qr/src/main.js']
-        environment:
-            APP_NAME: oracle-4qr
-        volumes:
-            - oracle-4qr-secrets:/app/secrets:rw
-            - oracle-4qr-geo:/var/lib/oraculum
-
-    oracle-5se:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/oracle-5se:latest
-        pull_policy: if_not_present
-        container_name: oracle-5se
-        network_mode: 'container:vpn-oracle-5se'
-        restart: always
-        env_file:
-            - stack.env
-        shm_size: '1gb'
-        command: ['sh', '-c', './entrypoint.sh']
-        environment:
-            APP_NAME: oracle-5se
-        volumes:
-            - oracle-5se-secrets:/app/secrets:rw
-            - oracle-5se-geo:/var/lib/oraculum
-
 volumes:
     oracle-geo:
-    oracle-1d-geo:
-    oracle-2bd-geo:
-    oracle-3s-geo:
-    oracle-4qr-geo:
-    oracle-5se-geo:
     oracle-secrets:
-    oracle-1d-secrets:
-    oracle-2bd-secrets:
-    oracle-3s-secrets:
-    oracle-4qr-secrets:
-    oracle-5se-secrets:

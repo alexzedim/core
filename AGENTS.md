@@ -19,12 +19,12 @@ When editing this repo, ask before committing: *does this line reveal how to rea
 Compose files follow `compose.<category>.yaml`, each with `name: '<category>'` at the top. Functional groups (per-stack services, networks, volumes and their interconnections are documented in `AGENTS-LOCAL.md`):
 
 - **routing** — TLS-terminating reverse proxy + its management panel (patch-built images from this repo's workflows), sidecars for certificate delivery and panel-managed L4 listeners
-- **network** — the house DNS resolver (encrypted client transports, filtering, offline-snapshot autonomy) + VPN egress gateways
+- **network** — the house DNS resolver (encrypted client transports, filtering, offline-snapshot autonomy) + an address-restricted egress proxy for clients behind restrictive firewalls
 - **storage** — shared PostgreSQL (two instances), Redis, object storage, message broker + exporters
 - **analytics** — Prometheus, Grafana, Loki, Promtail, exporters
 - **home** — a single smart-home service (host network mode, LAN-only)
 - **gitlab / git** — self-hosted Git + CI runners
-- **oracle / oraculum** — scraper fleet and RAG services
+- **oracle / oraculum** — a scraper service and RAG services
 - **ai / ai-platform / ai-local** — lab stacks (one with GPU passthrough)
 - **control** — Portainer
 
@@ -34,7 +34,7 @@ Compose files follow `compose.<category>.yaml`, each with `name: '<category>'` a
 
 Images built by the repo's GitHub Actions workflows are available on the deploy host without a registry pull; GHCR (`ghcr.io/<owner>/*`) is the backup/source of truth and deploys use the local copy.
 
-- `compose.network.yaml`, `compose.oracle.yaml` and `compose.oraculum.yaml` set `pull_policy: if_not_present` on all self-built `ghcr.io/<owner>/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Without this, compose's default policy re-pulls `:latest` from GHCR on every deploy. Third-party images keep the default policy.
+- `compose.oracle.yaml` and `compose.oraculum.yaml` set `pull_policy: if_not_present` on all self-built `ghcr.io/<owner>/*` services: deploy uses the local image and pulls from GHCR only if it's somehow missing locally. Without this, compose's default policy re-pulls `:latest` from GHCR on every deploy. Third-party images keep the default policy.
 - Stack webhooks (`pullimage`) and the "Re-pull image" GitOps toggle do nothing here; no stack uses GitOps webhooks/polling — deploys are manual ("Pull and redeploy" / "Update the stack"), which runs a plain `docker compose up -d`, so the file-level `pull_policy` is always in effect. Never check a "Re-pull image" option when you want the local copy.
 - Quick health check: in Portainer's stack containers table, an image shown as a bare `sha256:…` fragment means the container was created from a registry pull; the image tag means it was created from the local build.
 - `docker-prune` (in the git stack) is a nightly janitor that prunes stopped containers, unused images, and build cache past a retention window. Images used by any container are never removed; volumes are never pruned.

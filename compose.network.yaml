@@ -1,21 +1,29 @@
 # AdGuard Home (LAN DNS 128.0.0.255:53 + HE-v6, DoT server on :853 serving
-# adguard.cmnw.ru, UI :3300 -> https://adguard.cmnw.ru) + AdGuard VPN
-# gateways (vpn-oracle*). Scraper apps in compose.oracle.yaml join the
-# gateways' netns cross-stack. Deploy this stack BEFORE oracle.
+# adguard.cmnw.ru, UI :3300 -> https://adguard.cmnw.ru) + dns-snapshot +
+# egress-proxy. Operational detail (upstreams, pins, backups, host tooling)
+# lives in AGENTS-LOCAL.md "AdGuard Home (network stack)".
 # The :853 publish + tls volume MUST stay or the Keenetic DoT upstream dies.
 # dns-snapshot (CoreDNS :5353, stack-internal) serves the offline snapshot
-# from /srv/docker/dns-snapshot as the AGH fallback upstream — see AGENTS.md
-# "DNS autonomy snapshot".
+# from /srv/docker/dns-snapshot as the AGH fallback upstream.
 # The dns-v6 network (IPv6 ULA) gives adguard-home IPv6 egress for its
 # https://[2a09::]/dns-query upstream member; the joindns4 extra_hosts pin
 # backs the https://unfiltered.joindns4.eu/dns-query pool member.
-# See AGENTS.md "AdGuard - Home + VPN fleet" for volumes/SOCKS/watchdog.
 #
-# The six vpn-oracle* gateways are PARKED behind the 'vpn' compose profile
-# (COMPOSE_PROFILES=vpn): the oracle stack runs a single direct-egress
-# instance without a gateway. Restore: deploy this stack with the profile
-# enabled, then re-point the oracle service in compose.oracle.yaml to
-# network_mode: 'container:vpn-oracle' and drop its ports.
+# egress-proxy (gost) is an HTTPS forward proxy (HTTP CONNECT and SOCKS5 are
+# auto-detected on one TLS listener) for clients on networks that cannot
+# reach their model provider directly. Two independent controls, both
+# required:
+#   - admission (whitelist mode, the ~ prefix): only client addresses listed
+#     in EGRESS_PROXY_ALLOWED_CLIENTS get past the TLS handshake; an empty
+#     value rejects every client;
+#   - bypass (blacklist mode, the CIDR list followed by the name list):
+#     loopback, RFC1918, CGNAT, link-local, the LAN range, the HE prefix and
+#     the own-domain and wildcard-DNS names are never forwarded (HTTP 403).
+#     gost's bypass does not resolve names, so a hostname that resolves into
+#     a private range is only caught if its suffix is listed.
+# The TLS certificate is the wildcard pair refreshed by cert-sync in the
+# adguard tls directory (read-only mount). Upstream:
+# https://github.com/go-gost/gost — pinned to the 3.3.3 release.
 
 services:
     adguard-home:
@@ -58,241 +66,22 @@ services:
         volumes:
             - /srv/docker/dns-snapshot:/etc/coredns:ro
 
-    vpn-oracle:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle
-        volumes:
-            - vpn-oracle-adguard:/var/lib/adguardvpn
-            - oracle-geo:/var/lib/oraculum
+# === egress proxy for clients on restricted networks ===
+    egress-proxy:
+        image: gogost/gost:3.3.3
+        container_name: egress-proxy
+        restart: unless-stopped
+        command:
+            - -L
+            - "auto+tls://:8421?certFile=/tls/cert.pem&keyFile=/tls/key.pem&admission=~${EGRESS_PROXY_ALLOWED_CLIENTS}&bypass=0.0.0.0/8,10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,128.0.0.0/16,169.254.0.0/16,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7,fe80::/10,2001:470:28:284::/64,cmnw.ru,*.cmnw.ru,localhost,*.internal,*.lan,*.home.arpa,nip.io,*.nip.io,sslip.io,*.sslip.io,xip.io,*.xip.io,localtest.me,*.localtest.me,lvh.me,*.lvh.me,vcap.me,*.vcap.me,traefik.me,*.traefik.me,ip.oh.dev,*.ip.oh.dev"
         ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_VNC_PORT:-6181}:6080'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_CDP_PORT:-9321}:9222'
-        networks:
-            - cmnw
-            - oraculum
-
-    vpn-oracle-1d:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle-1d
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle-1d
+            - '25434:8421'
         volumes:
-            - vpn-oracle-1d-adguard:/var/lib/adguardvpn
-            - oracle-1d-geo:/var/lib/oraculum
-        ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_VNC_PORT:-6182}:6080'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_1D_CDP_PORT:-9322}:9222'
-        networks:
-            - cmnw
-            - oraculum
-
-    vpn-oracle-2bd:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle-2bd
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle-2bd
-        volumes:
-            - vpn-oracle-2bd-adguard:/var/lib/adguardvpn
-            - oracle-2bd-geo:/var/lib/oraculum
-        ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_VNC_PORT:-6183}:6080'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_2BD_CDP_PORT:-9323}:9222'
-        networks:
-            - cmnw
-            - oraculum
-
-    vpn-oracle-3s:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle-3s
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle-3s
-        volumes:
-            - vpn-oracle-3s-adguard:/var/lib/adguardvpn
-            - oracle-3s-geo:/var/lib/oraculum
-        ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_VNC_PORT:-6184}:6080'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_3S_CDP_PORT:-9324}:9222'
-        networks:
-            - cmnw
-            - oraculum
-
-    vpn-oracle-4qr:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle-4qr
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle-4qr
-        volumes:
-            - vpn-oracle-4qr-adguard:/var/lib/adguardvpn
-            - oracle-4qr-geo:/var/lib/oraculum
-        ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_4QR_LOGIN_PORT:-6185}:3000'
-        networks:
-            - cmnw
-            - oraculum
-
-    vpn-oracle-5se:
-        profiles:
-            - vpn
-        image: ghcr.io/alexzedim/adguard:latest
-        pull_policy: if_not_present
-        container_name: vpn-oracle-5se
-        restart: always
-        healthcheck:
-            test:
-                - CMD-SHELL
-                - 'if [ -f /var/lib/adguardvpn/mode-direct ]; then curl -s -m 8 -o /dev/null https://ifconfig.me || exit 1; else curl -s -m 8 -o /dev/null --interface tun0 https://ifconfig.me || exit 1; fi'
-            interval: 30s
-            timeout: 10s
-            retries: 10
-            start_period: 8m
-        cap_add:
-            - NET_ADMIN
-        devices:
-            - /dev/net/tun:/dev/net/tun
-        env_file:
-            - stack.env
-        environment:
-            APP_NAME: oracle-5se
-        volumes:
-            - vpn-oracle-5se-adguard:/var/lib/adguardvpn
-            - oracle-5se-geo:/var/lib/oraculum
-        ports:
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_LOGIN_PORT:-6186}:3000'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_SELKIES_PORT:-6187}:6080'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:${ORACLE_5SE_TURN_PORT:-3478}:3478/udp'
-            - '${ORACLE_BIND_IP:-128.0.0.255}:49160-49260:49160-49260/udp'
-        networks:
-            - cmnw
-            - oraculum
-
-volumes:
-    vpn-oracle-adguard:
-        external: true
-        name: oracle_vpn-oracle-adguard
-    vpn-oracle-1d-adguard:
-        external: true
-        name: oracle_vpn-oracle-1d-adguard
-    vpn-oracle-2bd-adguard:
-        external: true
-        name: oracle_vpn-oracle-2bd-adguard
-    vpn-oracle-3s-adguard:
-        external: true
-        name: oracle_vpn-oracle-3s-adguard
-    vpn-oracle-4qr-adguard:
-        external: true
-        name: oracle_vpn-oracle-4qr-adguard
-    vpn-oracle-5se-adguard:
-    oracle-geo:
-        external: true
-        name: oracle_oracle-geo
-    oracle-1d-geo:
-        external: true
-        name: oracle_oracle-1d-geo
-    oracle-2bd-geo:
-        external: true
-        name: oracle_oracle-2bd-geo
-    oracle-3s-geo:
-        external: true
-        name: oracle_oracle-3s-geo
-    oracle-4qr-geo:
-        external: true
-        name: oracle_oracle-4qr-geo
-    oracle-5se-geo:
-        external: true
-        name: oracle_oracle-5se-geo
+            - /srv/docker/adguard/tls:/tls:ro
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
 
 networks:
     dns-v6:
@@ -302,8 +91,3 @@ networks:
             config:
                 - subnet: fdc2:dba5:2eae:53::/64
                   gateway: fdc2:dba5:2eae:53::1
-    cmnw:
-        external: true
-    oraculum:
-        external: true
-        name: oraculum_oraculum

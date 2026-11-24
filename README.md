@@ -146,7 +146,7 @@
 | `compose.home.yaml` | Home Assistant 2026.9.4 (LAN-only :8123, host network for mDNS) | `host` |
 | `compose.git.yaml` | 5× GitHub Actions runners (3× cmnw, 2× oraculum), docker-prune janitor | `runner-network` |
 | `compose.gitlab.yaml` | GitLab CE 19.0.1 + gitlab-ssh socat relay (host :2222) | `cmnw` |
-| `compose.oracle.yaml` | 4× vpn-oracle AdGuard VPN gateways + `oracle` / `-1d` / `-2bd` / `-3s` | `oraculum`, `cmnw` (ext) |
+| `compose.oracle.yaml` | `oracle` — a single scraper instance (direct egress) | default |
 | `compose.oraculum.yaml` | indexator, oracular, archivum, gateway, LightRAG | `oraculum` |
 | `compose.ai.yaml` | GitHub MCP, Grafana MCP | `cmnw` |
 | `compose.control.yaml` | Portainer CE | default |
@@ -164,7 +164,7 @@
 - **Full observability stack** — Prometheus metrics, Grafana dashboards, Loki log aggregation with 30-day retention
 - **Smart home automation** — single-service Home Assistant on the host network (LAN-only) driving Wi-Fi/cloud devices via HACS integrations
 - **Graph-RAG platform** — LightRAG (private fork) with graph + vectors in PostgreSQL/pgvector, inference routed via OpenRouter
-- **Egress VPN fleet** — four AdGuard VPN gateways powering the oracle farm
+- **Restricted-network egress** — an address-restricted HTTPS forward proxy in the network stack for clients behind corporate firewalls
 - **CI/CD pipeline** — self-hosted GitHub Actions runners building the stack's images
 - **Infrastructure as code** — every service defined in version-controlled Docker Compose files, deployed via Portainer
 
@@ -178,7 +178,7 @@ core/
 ├── compose.home.yaml         # Home Assistant (single service, LAN-only)
 ├── compose.git.yaml          # GitHub Actions runners (5×), docker-prune
 ├── compose.gitlab.yaml       # GitLab CE
-├── compose.oracle.yaml       # AdGuard VPN gateways + oracle apps
+├── compose.oracle.yaml       # oracle scraper (single direct-egress instance)
 ├── compose.oraculum.yaml     # indexator, oracular, archivum, gateway, LightRAG
 ├── compose.ai.yaml           # GitHub MCP, Grafana MCP
 ├── compose.control.yaml      # Portainer
