@@ -20,9 +20,10 @@
 # ranges the local network uses). Compose refuses to render without it, so a
 # missing variable can never yield a proxy into the local network. Who may
 # use the proxy is decided at the edge, not here (AGENTS-LOCAL.md "Egress
-# proxy"). The access log is a size-capped file in the container's tmpfs
-# (`docker exec egress-proxy tail /tmp/3proxy.log`): 3proxy cannot write its
-# log to stdio as the unprivileged user it runs as.
+# proxy"). The access log is a plain file in the container's tmpfs
+# (`docker exec egress-proxy tail /tmp/3proxy.log`; starts empty on every
+# container start, bounded by the tmpfs size): 3proxy cannot write its log to
+# stdio as the unprivileged user it runs as.
 # Upstream: https://github.com/3proxy/3proxy — image tag pinned.
 
 services:
@@ -82,7 +83,6 @@ services:
                 'nscache 65536'
                 'timeouts 1 5 30 60 180 1800 15 60'
                 'log /tmp/3proxy.log'
-                'logmaxsize 10485760'
                 'deny * * ${EGRESS_PROXY_DENIED_NETS:?EGRESS_PROXY_DENIED_NETS must list the address ranges the proxy may never reach}'
                 'allow *'
                 'proxy -n -a -p8421'
