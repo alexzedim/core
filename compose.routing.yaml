@@ -24,6 +24,13 @@ name: 'routing'
 # (pgvector:5432) — these host port mappings MUST exist or the endpoints
 # are unreachable from outside; adding an L4 host on a new port in the
 # panel requires adding the matching mapping here and redeploying.
+#
+# Sharing :443 with another service: the patch-built panel (patch #6 in
+# caddy-panel/apply-selectel.cjs) adds Caddy listener wrappers to the main
+# server from CPM_LISTENER_WRAPPERS_JSON (unset/empty = no change). The edge
+# network is where that service sits — today only the egress-proxy of the
+# network stack, reached by Caddy as `egress-proxy:8421`. The wrapper shape
+# and the access-control rule live in AGENTS-LOCAL.md "Egress proxy".
 
 services:
   caddy:
@@ -52,7 +59,7 @@ services:
       - routing-internal
 
   caddy-manager:
-    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel.4
+    image: ghcr.io/alexzedim/caddy-proxy-manager-web:1.13.3-selectel.5
     pull_policy: if_not_present
     container_name: cmnw-caddy-manager
     restart: always
@@ -64,6 +71,7 @@ services:
       - ADMIN_PASSWORD=${CPM_ADMIN_PASSWORD}
       - CADDY_API_URL=http://cmnw-caddy:2019
       - BASE_URL=${CPM_BASE_URL:-http://128.0.0.255:3001}
+      - CPM_LISTENER_WRAPPERS_JSON=${CPM_LISTENER_WRAPPERS_JSON:-}
     ports:
       - "128.0.0.255:3001:3000"
     volumes:

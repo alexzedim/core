@@ -1,7 +1,9 @@
 name: build-caddy-panel
 
 # Patch-build of caddy-proxy-manager with the Selectel DNS provider added
-# (caddy-dns/selectel module + panel provider registry entry). Upstream lives
+# (caddy-dns/selectel module + panel provider registry entry) and a
+# deployment-controlled listener wrapper on the main HTTPS server
+# (CPM_LISTENER_WRAPPERS_JSON, see compose.routing.yaml). Upstream lives
 # at ingres-si/ingressi (formerly fuomag9/caddy-proxy-manager — GitHub
 # redirects the old name). The upstream is cloned at a pinned tag and patched
 # by caddy-panel/apply-selectel.cjs — no fork to maintain, rebasing = bump
@@ -23,7 +25,7 @@ on:
 env:
   UPSTREAM_TAG: ${{ github.event.inputs.upstream_tag || 'v1.13.3' }}
   UPSTREAM_REPO: https://github.com/ingres-si/ingressi
-  IMAGE_TAG: 1.13.3-selectel.4
+  IMAGE_TAG: 1.13.3-selectel.5
 
 jobs:
   build:

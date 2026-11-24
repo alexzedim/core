@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
  * Patch caddy-proxy-manager (pinned tag) to add the Selectel DNS
- * provider (github.com/caddy-dns/selectel):
+ * provider (github.com/caddy-dns/selectel) plus a deployment-controlled
+ * listener wrapper on the main HTTPS server:
  *   1. docker/caddy/go.mod   — pinned module require
  *   2. docker/caddy/build.sh — xcaddy --with entry
  *   3. src/lib/dns-providers.ts — panel provider registry entry
  *   4. docker/caddy/Dockerfile — builder GOPROXY (see the patch below)
+ *   5. src/lib/caddy.ts — caddy-l4 postgres_tls for L4 hosts opted in via meta
+ *   6. src/lib/caddy.ts — listener wrappers read from CPM_LISTENER_WRAPPERS_JSON
  *
  * Run from the upstream repo root:  node apply-selectel.cjs v1.13.3
  * Idempotent: skips parts that are already applied. CommonJS — the
@@ -94,6 +97,47 @@ patch(
   "src/lib/caddy.ts",
   '      if (host.tlsTermination) {\n        handlers.push({ handler: "tls" });\n      }',
   '      if (host.tlsTermination) {\n        if ((meta as unknown as { postgresSsl?: boolean } | null)?.postgresSsl) {\n          handlers.push({ handler: "postgres_tls" }, { handler: "tls", connection_policies: [{ alpn: ["postgresql"] }] });\n        } else {\n          handlers.push({ handler: "tls" });\n        }\n      }'
+);
+
+// 6. caddy.ts — optional listener wrappers on the main HTTP/HTTPS server, read
+//    at config-generation time from the env var CPM_LISTENER_WRAPPERS_JSON (a
+//    JSON array of Caddy listener wrapper objects; unset, empty or invalid =
+//    no change to the generated config). Purpose: let the edge route selected
+//    TLS connections — matched by SNI and source address — to another service
+//    through the :443 listener it already owns, so that service needs no
+//    listener or published port of its own. The deployment must list the
+//    "tls" placeholder wrapper itself at the position where the HTTPS
+//    handshake is to happen: without it Caddy prepends the placeholder and
+//    every other wrapper only ever sees decrypted traffic.
+var helper = [
+  "// Listener wrappers for the main server come from the environment so a deployment",
+  "// can route selected TLS connections (by SNI and source address) to another service",
+  "// through the :443 listener this server already owns.",
+  "export function buildEnvListenerWrappers(): Record<string, unknown> {",
+  '  const raw = process.env.CPM_LISTENER_WRAPPERS_JSON?.trim();',
+  "  if (!raw) {",
+  "    return {};",
+  "  }",
+  "  try {",
+  "    const parsed: unknown = JSON.parse(raw);",
+  "    if (!Array.isArray(parsed) || parsed.length === 0) {",
+  "      return {};",
+  "    }",
+  "    return { listener_wrappers: parsed };",
+  "  } catch (err) {",
+  '    console.error("CPM_LISTENER_WRAPPERS_JSON is not a JSON array; listener wrappers disabled", err);',
+  "    return {};",
+  "  }",
+  "}",
+  "",
+  "export async function buildCaddyDocument() {",
+].join("\n");
+patch("src/lib/caddy.ts", "export async function buildCaddyDocument() {", helper);
+
+patch(
+  "src/lib/caddy.ts",
+  "      // Trusted proxies / client_ip_headers / trusted_proxies_strict (issue #222)\n      ...serverTrustedProxies,",
+  "      // Trusted proxies / client_ip_headers / trusted_proxies_strict (issue #222)\n      ...serverTrustedProxies,\n      ...buildEnvListenerWrappers(),"
 );
 
 console.log("selectel patch applied against " + tag);

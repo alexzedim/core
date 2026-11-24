@@ -9,21 +9,18 @@
 # https://[2a09::]/dns-query upstream member; the joindns4 extra_hosts pin
 # backs the https://unfiltered.joindns4.eu/dns-query pool member.
 #
-# egress-proxy (gost) is an HTTPS forward proxy (HTTP CONNECT and SOCKS5 are
-# auto-detected on one TLS listener) for clients on networks that cannot
-# reach their model provider directly. Two independent controls, both
-# required:
-#   - admission (whitelist mode, the ~ prefix): only client addresses listed
-#     in EGRESS_PROXY_ALLOWED_CLIENTS get past the TLS handshake; an empty
-#     value rejects every client;
-#   - bypass (blacklist mode, the CIDR list followed by the name list):
-#     loopback, RFC1918, CGNAT, link-local, the LAN range, the HE prefix and
-#     the own-domain and wildcard-DNS names are never forwarded (HTTP 403).
-#     gost's bypass does not resolve names, so a hostname that resolves into
-#     a private range is only caught if its suffix is listed.
-# The TLS certificate is the wildcard pair refreshed by cert-sync in the
-# adguard tls directory (read-only mount). Upstream:
-# https://github.com/go-gost/gost — pinned to the 3.3.3 release.
+# egress-proxy (3proxy) is an HTTP forward proxy (CONNECT) for clients on
+# networks that cannot reach their model provider directly. It has no
+# published port and no TLS of its own: the Caddy edge (compose.routing.yaml)
+# terminates TLS on :443 for one dedicated hostname and forwards the
+# decrypted stream here over the shared external `edge` network, where Caddy
+# is its only neighbour. Destination policy is enforced on the RESOLVED
+# address: EGRESS_PROXY_DENIED_NETS must list every range the proxy may never
+# reach (loopback, RFC1918, CGNAT, link-local, plus whatever non-RFC1918
+# ranges the local network uses). Compose refuses to render without it, so a
+# missing variable can never yield a proxy into the local network. Who may
+# use the proxy is decided at the edge, not here (AGENTS-LOCAL.md "Egress
+# proxy"). Upstream: https://github.com/3proxy/3proxy — image tag pinned.
 
 services:
     adguard-home:
@@ -68,20 +65,32 @@ services:
 
 # === egress proxy for clients on restricted networks ===
     egress-proxy:
-        image: gogost/gost:3.3.3
+        image: 3proxy/3proxy:0.9.9.4.busybox
         container_name: egress-proxy
         restart: unless-stopped
+        user: '65534:65534'
+        read_only: true
         command:
-            - -L
-            - "auto+tls://:8421?certFile=/tls/cert.pem&keyFile=/tls/key.pem&admission=~${EGRESS_PROXY_ALLOWED_CLIENTS}&bypass=0.0.0.0/8,10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,128.0.0.0/16,169.254.0.0/16,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7,fe80::/10,2001:470:28:284::/64,cmnw.ru,*.cmnw.ru,localhost,*.internal,*.lan,*.home.arpa,nip.io,*.nip.io,sslip.io,*.sslip.io,xip.io,*.xip.io,localtest.me,*.localtest.me,lvh.me,*.lvh.me,vcap.me,*.vcap.me,traefik.me,*.traefik.me,ip.oh.dev,*.ip.oh.dev"
-        ports:
-            - '25434:8421'
-        volumes:
-            - /srv/docker/adguard/tls:/tls:ro
+            - sh
+            - -c
+            - >-
+                printf '%s\n'
+                'nserver 127.0.0.11'
+                'nscache 65536'
+                'timeouts 1 5 30 60 180 1800 15 60'
+                'log stdout'
+                'deny * * ${EGRESS_PROXY_DENIED_NETS:?EGRESS_PROXY_DENIED_NETS must list the address ranges the proxy may never reach}'
+                'allow *'
+                'proxy -n -a -p8421'
+                > /tmp/3proxy.cfg && exec 3proxy /tmp/3proxy.cfg
+        tmpfs:
+            - /tmp
         security_opt:
             - no-new-privileges:true
         cap_drop:
             - ALL
+        networks:
+            - edge
 
 networks:
     dns-v6:
@@ -91,3 +100,6 @@ networks:
             config:
                 - subnet: fdc2:dba5:2eae:53::/64
                   gateway: fdc2:dba5:2eae:53::1
+    edge:
+        external: true
+        name: cmnw_edge
